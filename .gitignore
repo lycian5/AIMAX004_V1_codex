@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.env
+exports/*.json
+exports/*.jsonl
+exports/*.csv
+exports/*.md
+!exports/.gitkeep*.egg-info/
