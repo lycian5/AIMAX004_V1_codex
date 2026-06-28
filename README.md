@@ -2,13 +2,31 @@
 
 Standalone policy article collector.
 
-## Use In Browser
+## One-Click Web Use
 
-Open the GitHub Pages HTML app after publishing Pages:
+This repo includes a static HTML app at `docs/index.html`.
 
-- `docs/index.html` is a static collector UI.
-- It runs in the browser and uses Jina Reader for browser-friendly fetching.
-- It can preview collected articles and download JSON, CSV, or Markdown.
+## Deploy To Vercel
+
+Import this GitHub repo into Vercel:
+
+- Repository: `lycian5/AIMAX004_V1_codex`
+- Framework Preset: Other
+- Build Command: disabled by `vercel.json`
+- Install Command: disabled by `vercel.json`
+- Output Directory: `docs`
+
+Vercel will serve the collector UI from the site root.
+
+## Use In Browser Locally
+
+Open:
+
+```text
+docs/index.html
+```
+
+The static UI runs in the browser and uses Jina Reader for browser-friendly fetching. It can preview collected articles and download JSON, CSV, or Markdown.
 
 ## Python CLI
 
