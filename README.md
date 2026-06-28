@@ -2,31 +2,40 @@
 
 Standalone policy article collector.
 
+## Vercel URL
+
+Target deployment URL:
+
+https://aimax-004-v1-codex.vercel.app
+
+To get this exact URL in Vercel, create or import the project with this project name:
+
+```text
+aimax-004-v1-codex
+```
+
+This repo includes `vercel.json`, so Vercel serves the static collector UI from `docs/` at the site root.
+
 ## One-Click Web Use
 
-This repo includes a static HTML app at `docs/index.html`.
+The browser UI is located at:
+
+```text
+docs/index.html
+```
+
+It runs in the browser and uses Jina Reader for browser-friendly fetching. It can preview collected articles and download JSON, CSV, or Markdown.
 
 ## Deploy To Vercel
 
 Import this GitHub repo into Vercel:
 
 - Repository: `lycian5/AIMAX004_V1_codex`
+- Project Name: `aimax-004-v1-codex`
 - Framework Preset: Other
 - Build Command: disabled by `vercel.json`
 - Install Command: disabled by `vercel.json`
 - Output Directory: `docs`
-
-Vercel will serve the collector UI from the site root.
-
-## Use In Browser Locally
-
-Open:
-
-```text
-docs/index.html
-```
-
-The static UI runs in the browser and uses Jina Reader for browser-friendly fetching. It can preview collected articles and download JSON, CSV, or Markdown.
 
 ## Python CLI
 

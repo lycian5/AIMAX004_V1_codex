@@ -1,0 +1,9 @@
+{
+  "name": "aimax-004-v1-codex",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Standalone policy article collector static UI for Vercel.",
+  "scripts": {
+    "start": "python -m http.server 8080 -d docs"
+  }
+}
