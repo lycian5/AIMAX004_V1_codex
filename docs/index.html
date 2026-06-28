@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AIMAX Policy Article Collector</title>
+  <style>
+    :root {
+      --bg: #f5f7fb;
+      --panel: #ffffff;
+      --ink: #182230;
+      --muted: #667085;
+      --line: #d7dee8;
+      --accent: #0f766e;
+      --accent-dark: #115e59;
+      --danger: #b42318;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--ink); font-family: Arial, sans-serif; }
+    main { max-width: 1180px; margin: 0 auto; padding: 28px; }
+    header { display: flex; justify-content: space-between; gap: 18px; align-items: flex-start; margin-bottom: 22px; }
+    h1 { margin: 0 0 6px; font-size: 30px; letter-spacing: 0; }
+    h2 { margin: 0 0 10px; font-size: 18px; }
+    p { line-height: 1.55; }
+    .muted { color: var(--muted); }
+    .panel, .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; }
+    .panel { padding: 18px; margin-bottom: 16px; }
+    .controls { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+    label { display: grid; gap: 6px; font-size: 13px; color: var(--muted); }
+    input, select, textarea, button { width: 100%; border: 1px solid var(--line); border-radius: 6px; font: inherit; }
+    input, select { min-height: 40px; padding: 0 10px; background: white; }
+    textarea { min-height: 96px; padding: 10px; resize: vertical; }
+    button { min-height: 40px; padding: 0 12px; cursor: pointer; }
+    .primary { background: var(--accent); color: white; border-color: var(--accent); }
+    .primary:hover { background: var(--accent-dark); }
+    .secondary { background: white; color: var(--ink); }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 16px 0; }
+    .stat { padding: 14px; background: white; border: 1px solid var(--line); border-radius: 8px; }
+    .stat strong { display: block; font-size: 24px; }
+    .grid { display: grid; gap: 12px; }
+    .card { padding: 16px; }
+    .card h3 { margin: 0 0 8px; font-size: 18px; }
+    .meta { color: var(--muted); font-size: 13px; display: flex; gap: 10px; flex-wrap: wrap; }
+    .url { color: var(--accent-dark); overflow-wrap: anywhere; }
+    pre { white-space: pre-wrap; line-height: 1.45; max-height: 260px; overflow: auto; background: #f8fafc; border: 1px solid var(--line); border-radius: 6px; padding: 12px; }
+    .error { color: var(--danger); }
+    @media (max-width: 860px) { .controls, .stats { grid-template-columns: 1fr; } header { display: block; } }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>AIMAX Policy Article Collector</h1>
+        <p class="muted">Static HTML collector for quick policy article preview and export. It uses Jina Reader as a browser-friendly fetch fallback.</p>
+      </div>
+      <div class="actions">
+        <button class="secondary" id="downloadJson">JSON</button>
+        <button class="secondary" id="downloadCsv">CSV</button>
+        <button class="secondary" id="downloadMd">Markdown</button>
+      </div>
+    </header>
+
+    <section class="panel">
+      <div class="controls">
+        <label>Source
+          <select id="source">
+            <option value="all">All default sources</option>
+            <option value="policy_briefing">Policy Briefing</option>
+            <option value="bizinfo">Bizinfo</option>
+            <option value="work24">Work24</option>
+            <option value="public_data">Public Data Portal</option>
+            <option value="custom">Custom URLs only</option>
+          </select>
+        </label>
+        <label>Max pages per source
+          <input id="maxPages" type="number" min="1" max="20" value="5" />
+        </label>
+        <label>Timeout seconds
+          <input id="timeout" type="number" min="5" max="60" value="20" />
+        </label>
+        <label>Discovery
+          <select id="discovery">
+            <option value="on">Seed + discovered links</option>
+            <option value="off">Seed URLs only</option>
+          </select>
+        </label>
+      </div>
+      <label style="margin-top:12px">Custom URLs, one per line
+        <textarea id="customUrls" placeholder="https://example.com/news/list"></textarea>
+      </label>
+      <div class="actions" style="margin-top:12px">
+        <button class="primary" id="run">Collect</button>
+        <button class="secondary" id="clear">Clear</button>
+      </div>
+    </section>
+
+    <section class="stats">
+      <div class="stat"><strong id="count">0</strong><span class="muted">Collected</span></div>
+      <div class="stat"><strong id="failures">0</strong><span class="muted">Failures</span></div>
+      <div class="stat"><strong id="skipped">0</strong><span class="muted">Duplicates</span></div>
+      <div class="stat"><strong id="elapsed">0s</strong><span class="muted">Elapsed</span></div>
+    </section>
+
+    <p id="status" class="muted">Ready.</p>
+    <section id="results" class="grid"></section>
+  </main>
+
+  <script>
+    const SOURCES = {
+      policy_briefing: { name: 'Policy Briefing', urls: ['https://www.korea.kr/briefing/pressReleaseList.do'] },
+      bizinfo: { name: 'Bizinfo', urls: ['https://www.bizinfo.go.kr/web/lay1/bbs/S1T122C128/AS/74/list.do'] },
+      work24: { name: 'Work24', urls: ['https://www.work24.go.kr'] },
+      public_data: { name: 'Public Data Portal', urls: ['https://www.data.go.kr'] }
+    };
+
+    let articles = [];
+    let failureCount = 0;
+    let duplicateCount = 0;
+
+    const $ = (id) => document.getElementById(id);
+    $('run').onclick = collect;
+    $('clear').onclick = () => { articles = []; failureCount = 0; duplicateCount = 0; render(); setStatus('Ready.'); };
+    $('downloadJson').onclick = () => download('articles.json', JSON.stringify(articles, null, 2));
+    $('downloadCsv').onclick = () => download('articles.csv', toCsv(articles));
+    $('downloadMd').onclick = () => download('articles.md', toMarkdown(articles));
+
+    async function collect() {
+      const started = Date.now();
+      articles = [];
+      failureCount = 0;
+      duplicateCount = 0;
+      render();
+      $('run').disabled = true;
+      setStatus('Collecting...');
+      try {
+        const seeds = selectedSeeds();
+        const maxPages = Number($('maxPages').value || 5);
+        const timeoutMs = Number($('timeout').value || 20) * 1000;
+        const seenHashes = new Set();
+        for (const seed of seeds) {
+          setStatus(`Discovering ${seed.name}...`);
+          const urls = await discoverUrls(seed, maxPages, timeoutMs);
+          for (const url of urls.slice(0, maxPages)) {
+            setStatus(`Fetching ${url}`);
+            const article = await collectOne(seed, url, timeoutMs);
+            if (!article) { failureCount += 1; renderStats(started); continue; }
+            if (seenHashes.has(article.content_hash)) { duplicateCount += 1; renderStats(started); continue; }
+            seenHashes.add(article.content_hash);
+            articles.push(article);
+            render(started);
+          }
+        }
+        setStatus('Done.');
+      } catch (error) {
+        setStatus(String(error), true);
+      } finally {
+        $('run').disabled = false;
+        renderStats(started);
+      }
+    }
+
+    function selectedSeeds() {
+      const selected = $('source').value;
+      const custom = $('customUrls').value.split(/\r?\n/).map(v => v.trim()).filter(Boolean);
+      const seeds = [];
+      if (selected === 'all') {
+        Object.entries(SOURCES).forEach(([type, source]) => seeds.push({ type, name: source.name, urls: source.urls }));
+      } else if (selected !== 'custom') {
+        const source = SOURCES[selected];
+        seeds.push({ type: selected, name: source.name, urls: source.urls });
+      }
+      if (custom.length) seeds.push({ type: 'custom', name: 'Custom', urls: custom });
+      return seeds;
+    }
+
+    async function discoverUrls(seed, maxPages, timeoutMs) {
+      const urls = [];
+      const seen = new Set();
+      for (const seedUrl of seed.urls) {
+        addUrl(urls, seen, seedUrl);
+        if ($('discovery').value === 'off') continue;
+        const text = await fetchViaReader(seedUrl, timeoutMs).catch(() => '');
+        for (const candidate of extractCandidateUrls(text, seedUrl)) {
+          if (urls.length >= maxPages) break;
+          addUrl(urls, seen, candidate);
+        }
+      }
+      return urls;
+    }
+
+    async function collectOne(seed, url, timeoutMs) {
+      try {
+        const text = await fetchViaReader(url, timeoutMs);
+        const title = extractTitle(text) || seed.name;
+        const body = normalizeText(text).slice(0, 12000);
+        if (!body) return null;
+        return {
+          source_type: seed.type,
+          source_name: seed.name,
+          title,
+          url,
+          raw_content: body,
+          content_hash: await sha256(`${title.toLowerCase()}\n${body}`),
+          fetched_at: new Date().toISOString(),
+          strategy: 'jina_reader_static_html'
+        };
+      } catch (_) {
+        return null;
+      }
+    }
+
+    async function fetchViaReader(url, timeoutMs) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        const readerUrl = 'https://r.jina.ai/http://' + url.replace(/^https?:\/\//, '');
+        const response = await fetch(readerUrl, { signal: controller.signal });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return await response.text();
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+
+    function extractCandidateUrls(text, baseUrl) {
+      const base = new URL(baseUrl);
+      const matches = text.match(/https?:\/\/[^\s)\]"']+/g) || [];
+      return [...new Set(matches)]
+        .filter(url => {
+          try {
+            const parsed = new URL(url);
+            return parsed.hostname === base.hostname && !/\.(jpg|jpeg|png|gif|webp|svg|css|js|pdf|zip|hwp|hwpx|xlsx?)$/i.test(parsed.pathname);
+          } catch { return false; }
+        })
+        .sort((a, b) => scoreUrl(b) - scoreUrl(a));
+    }
+
+    function scoreUrl(url) {
+      const lower = url.toLowerCase();
+      let score = 0;
+      ['view', 'detail', 'article', 'notice', 'bbs', 'board', 'press', 'news'].forEach(t => { if (lower.includes(t)) score += 2; });
+      if (/[?&](seq|id|no|ntt|bbs|article|dataid)=/i.test(lower)) score += 3;
+      return score;
+    }
+
+    function extractTitle(text) {
+      const titleLine = text.split('\n').find(line => /^Title:\s*/i.test(line));
+      if (titleLine) return titleLine.replace(/^Title:\s*/i, '').trim().slice(0, 180);
+      const heading = text.split('\n').find(line => /^#\s+/.test(line));
+      return heading ? heading.replace(/^#\s+/, '').trim().slice(0, 180) : '';
+    }
+
+    function addUrl(urls, seen, url) {
+      const normalized = url.split('#')[0].trim();
+      if (!normalized || seen.has(normalized)) return;
+      seen.add(normalized);
+      urls.push(normalized);
+    }
+
+    function normalizeText(value) { return String(value || '').replace(/\s+/g, ' ').trim(); }
+
+    async function sha256(value) {
+      const data = new TextEncoder().encode(value);
+      const hash = await crypto.subtle.digest('SHA-256', data);
+      return [...new Uint8Array(hash)].map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    function render(started = Date.now()) {
+      renderStats(started);
+      $('results').innerHTML = articles.map(article => `
+        <article class="card">
+          <h3>${escapeHtml(article.title)}</h3>
+          <div class="meta"><span>${escapeHtml(article.source_type)}</span><span>${escapeHtml(article.strategy)}</span><span>${escapeHtml(article.fetched_at)}</span></div>
+          <p><a class="url" href="${article.url}" target="_blank">${article.url}</a></p>
+          <pre>${escapeHtml(article.raw_content.slice(0, 1200))}</pre>
+        </article>`).join('');
+    }
+
+    function renderStats(started) {
+      $('count').textContent = articles.length;
+      $('failures').textContent = failureCount;
+      $('skipped').textContent = duplicateCount;
+      $('elapsed').textContent = `${Math.max(0, Math.round((Date.now() - started) / 1000))}s`;
+    }
+
+    function setStatus(text, isError = false) {
+      $('status').textContent = text;
+      $('status').className = isError ? 'error' : 'muted';
+    }
+
+    function download(filename, content) {
+      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function toCsv(rows) {
+      const headers = ['source_type', 'title', 'url', 'strategy', 'content_hash', 'summary'];
+      const lines = [headers.join(',')];
+      rows.forEach(row => lines.push(headers.map(h => csvCell(h === 'summary' ? row.raw_content.slice(0, 240) : row[h])).join(',')));
+      return lines.join('\n');
+    }
+
+    function toMarkdown(rows) {
+      return ['# Collected Articles', '', ...rows.flatMap(row => [`## ${row.title}`, '', `- Source: ${row.source_type}`, `- URL: ${row.url}`, '', row.raw_content.slice(0, 2000), ''])].join('\n');
+    }
+
+    function csvCell(value) { return `"${String(value || '').replace(/"/g, '""')}"`; }
+    function escapeHtml(value) { return String(value || '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
+  </script>
+</body>
+</html>
