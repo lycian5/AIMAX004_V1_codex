@@ -3,316 +3,1395 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>aimax-004-v1-codex</title>
+  <title>COA NEWS — AI 소재 수집 엔진</title>
+  <meta name="description" content="COA NEWS AI Content Engine: AI 비즈니스·창업·정책·지원사업 소재를 자동 수집하고 점수화하여 엑셀로 정리합니다." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <style>
     :root {
-      --bg: #f5f7fb;
-      --panel: #ffffff;
-      --ink: #182230;
-      --muted: #667085;
-      --line: #d7dee8;
-      --accent: #0f766e;
-      --accent-dark: #115e59;
-      --danger: #b42318;
+      --bg: #0b0f1a;
+      --bg2: #111827;
+      --surface: #1a2235;
+      --surface2: #212d42;
+      --border: #2a3a55;
+      --ink: #e8edf5;
+      --ink2: #94a3b8;
+      --ink3: #64748b;
+      --accent: #3b82f6;
+      --accent2: #60a5fa;
+      --green: #10b981;
+      --orange: #f59e0b;
+      --red: #ef4444;
+      --purple: #a855f7;
+      --pink: #ec4899;
+      --teal: #14b8a6;
+
+      --cat-ai: #3b82f6;
+      --cat-startup: #10b981;
+      --cat-policy: #f59e0b;
+      --cat-column: #a855f7;
+
+      --radius: 12px;
+      --radius-sm: 8px;
+      --shadow: 0 4px 24px rgba(0,0,0,0.4);
+      --shadow-sm: 0 2px 8px rgba(0,0,0,0.3);
     }
-    * { box-sizing: border-box; }
-    body { margin: 0; background: var(--bg); color: var(--ink); font-family: Arial, sans-serif; }
-    main { max-width: 1180px; margin: 0 auto; padding: 28px; }
-    header { display: flex; justify-content: space-between; gap: 18px; align-items: flex-start; margin-bottom: 22px; }
-    h1 { margin: 0 0 6px; font-size: 30px; letter-spacing: 0; }
-    h2 { margin: 0 0 10px; font-size: 18px; }
-    p { line-height: 1.55; }
-    .muted { color: var(--muted); }
-    .panel, .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; }
-    .panel { padding: 18px; margin-bottom: 16px; }
-    .controls { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
-    label { display: grid; gap: 6px; font-size: 13px; color: var(--muted); }
-    input, select, textarea, button { width: 100%; border: 1px solid var(--line); border-radius: 6px; font: inherit; }
-    input, select { min-height: 40px; padding: 0 10px; background: white; }
-    textarea { min-height: 96px; padding: 10px; resize: vertical; }
-    button { min-height: 40px; padding: 0 12px; cursor: pointer; }
-    .primary { background: var(--accent); color: white; border-color: var(--accent); }
-    .primary:hover { background: var(--accent-dark); }
-    .secondary { background: white; color: var(--ink); }
-    .actions { display: flex; gap: 8px; flex-wrap: wrap; }
-    .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 16px 0; }
-    .stat { padding: 14px; background: white; border: 1px solid var(--line); border-radius: 8px; }
-    .stat strong { display: block; font-size: 24px; }
-    .grid { display: grid; gap: 12px; }
-    .card { padding: 16px; }
-    .card h3 { margin: 0 0 8px; font-size: 18px; }
-    .meta { color: var(--muted); font-size: 13px; display: flex; gap: 10px; flex-wrap: wrap; }
-    .url { color: var(--accent-dark); overflow-wrap: anywhere; }
-    pre { white-space: pre-wrap; line-height: 1.45; max-height: 260px; overflow: auto; background: #f8fafc; border: 1px solid var(--line); border-radius: 6px; padding: 12px; }
-    .error { color: var(--danger); }
-    @media (max-width: 860px) { .controls, .stats { grid-template-columns: 1fr; } header { display: block; } }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: 'Pretendard', 'Inter', -apple-system, sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── HERO HEADER ── */
+    .hero {
+      background: linear-gradient(135deg, #0b0f1a 0%, #0f1f3d 50%, #0b0f1a 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 28px 32px 24px;
+      position: relative;
+      overflow: hidden;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -60px; left: -60px;
+      width: 320px; height: 320px;
+      background: radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero::after {
+      content: '';
+      position: absolute;
+      bottom: -80px; right: 10%;
+      width: 400px; height: 400px;
+      background: radial-gradient(circle, rgba(168,85,247,0.08) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .hero-inner {
+      max-width: 1360px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      flex-wrap: wrap;
+      position: relative;
+      z-index: 1;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .brand-logo {
+      width: 52px; height: 52px;
+      background: linear-gradient(135deg, #3b82f6, #a855f7);
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+      font-weight: 900;
+      color: white;
+      letter-spacing: -1px;
+      box-shadow: 0 0 24px rgba(59,130,246,0.4);
+      flex-shrink: 0;
+    }
+    .brand-text h1 {
+      font-size: 26px;
+      font-weight: 800;
+      background: linear-gradient(90deg, #e8edf5, #93c5fd);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      letter-spacing: -0.5px;
+      line-height: 1.2;
+    }
+    .brand-text p {
+      font-size: 13px;
+      color: var(--ink2);
+      margin-top: 3px;
+      letter-spacing: 0.3px;
+    }
+    .hero-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    /* ── BUTTONS ── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 9px 18px;
+      border-radius: var(--radius-sm);
+      font-size: 13.5px;
+      font-weight: 600;
+      cursor: pointer;
+      border: none;
+      transition: all 0.18s ease;
+      font-family: inherit;
+      white-space: nowrap;
+      letter-spacing: 0.2px;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #3b82f6, #2563eb);
+      color: white;
+      box-shadow: 0 0 18px rgba(59,130,246,0.35);
+    }
+    .btn-primary:hover:not(:disabled) {
+      background: linear-gradient(135deg, #60a5fa, #3b82f6);
+      box-shadow: 0 0 28px rgba(59,130,246,0.5);
+      transform: translateY(-1px);
+    }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .btn-ghost {
+      background: rgba(255,255,255,0.06);
+      color: var(--ink2);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover:not(:disabled) {
+      background: rgba(255,255,255,0.1);
+      color: var(--ink);
+      border-color: var(--accent);
+    }
+    .btn-green {
+      background: linear-gradient(135deg, #10b981, #059669);
+      color: white;
+      box-shadow: 0 0 14px rgba(16,185,129,0.3);
+    }
+    .btn-green:hover:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 0 22px rgba(16,185,129,0.45);
+    }
+    .btn-orange {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: white;
+      box-shadow: 0 0 14px rgba(245,158,11,0.3);
+    }
+    .btn-orange:hover:not(:disabled) {
+      transform: translateY(-1px);
+    }
+    .btn-purple {
+      background: linear-gradient(135deg, #a855f7, #7c3aed);
+      color: white;
+      box-shadow: 0 0 14px rgba(168,85,247,0.3);
+    }
+    .btn-purple:hover:not(:disabled) {
+      transform: translateY(-1px);
+    }
+    .btn-danger {
+      background: rgba(239,68,68,0.12);
+      color: #f87171;
+      border: 1px solid rgba(239,68,68,0.3);
+    }
+    .btn-danger:hover:not(:disabled) {
+      background: rgba(239,68,68,0.2);
+    }
+    .btn-lg {
+      padding: 12px 28px;
+      font-size: 15px;
+      border-radius: 10px;
+    }
+    .btn-sm {
+      padding: 6px 13px;
+      font-size: 12.5px;
+      border-radius: 6px;
+    }
+
+    /* ── LAYOUT ── */
+    .container {
+      max-width: 1360px;
+      margin: 0 auto;
+      padding: 24px 32px 60px;
+    }
+
+    /* ── STATS BAR ── */
+    .stats-bar {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+    }
+    .stat-card.blue::before { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
+    .stat-card.green::before { background: linear-gradient(90deg, #10b981, #34d399); }
+    .stat-card.orange::before { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+    .stat-card.purple::before { background: linear-gradient(90deg, #a855f7, #c084fc); }
+    .stat-card.red::before { background: linear-gradient(90deg, #ef4444, #f87171); }
+    .stat-number {
+      font-size: 30px;
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: -1px;
+      background: linear-gradient(135deg, #e8edf5, #93c5fd);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .stat-label {
+      font-size: 12px;
+      color: var(--ink3);
+      margin-top: 4px;
+      font-weight: 500;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* ── CONTROL PANEL ── */
+    .control-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .control-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-bottom: 16px;
+    }
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+    .field label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--ink3);
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+    }
+    .field select,
+    .field input {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--ink);
+      font: inherit;
+      font-size: 13.5px;
+      height: 40px;
+      padding: 0 12px;
+      outline: none;
+      transition: border-color 0.18s;
+      width: 100%;
+    }
+    .field select:focus,
+    .field input:focus { border-color: var(--accent); }
+    .field textarea {
+      background: var(--bg2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--ink);
+      font: inherit;
+      font-size: 13px;
+      padding: 10px 12px;
+      resize: vertical;
+      min-height: 72px;
+      width: 100%;
+      outline: none;
+      transition: border-color 0.18s;
+    }
+    .field textarea:focus { border-color: var(--accent); }
+
+    .control-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .status-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 14px;
+      border-radius: 999px;
+      font-size: 12.5px;
+      font-weight: 500;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      color: var(--ink2);
+      flex: 1;
+      min-width: 200px;
+    }
+    .status-pill.running { border-color: var(--accent); color: var(--accent2); }
+    .status-pill.done { border-color: var(--green); color: #34d399; }
+    .status-pill.error { border-color: var(--red); color: #f87171; }
+    .pulse {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: currentColor;
+      animation: pulse 1.2s ease-in-out infinite;
+      flex-shrink: 0;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.7); }
+    }
+
+    /* ── FILTER BAR ── */
+    .filter-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .filter-label { font-size: 13px; color: var(--ink3); font-weight: 500; }
+    .cat-btn {
+      padding: 6px 16px;
+      border-radius: 999px;
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+      border: 1.5px solid transparent;
+      transition: all 0.16s;
+      font-family: inherit;
+      color: var(--ink2);
+      background: var(--surface);
+    }
+    .cat-btn:hover { color: var(--ink); }
+    .cat-btn.active-all { border-color: var(--accent); color: var(--accent2); background: rgba(59,130,246,0.1); }
+    .cat-btn.active-ai { border-color: var(--cat-ai); color: var(--cat-ai); background: rgba(59,130,246,0.1); }
+    .cat-btn.active-startup { border-color: var(--cat-startup); color: var(--cat-startup); background: rgba(16,185,129,0.1); }
+    .cat-btn.active-policy { border-color: var(--cat-policy); color: var(--cat-policy); background: rgba(245,158,11,0.1); }
+    .cat-btn.active-column { border-color: var(--cat-column); color: var(--cat-column); background: rgba(168,85,247,0.1); }
+
+    .sort-select {
+      margin-left: auto;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--ink2);
+      font: inherit;
+      font-size: 12.5px;
+      height: 34px;
+      padding: 0 10px;
+      outline: none;
+      cursor: pointer;
+    }
+    .sort-select:focus { border-color: var(--accent); }
+
+    /* ── RESULTS HEADER ── */
+    .results-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .results-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--ink);
+    }
+    .results-count {
+      font-size: 13px;
+      color: var(--ink3);
+      font-weight: 400;
+    }
+    .export-group {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    /* ── ARTICLE CARDS ── */
+    .cards-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .article-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 22px;
+      display: grid;
+      grid-template-columns: 44px 1fr auto;
+      gap: 16px;
+      align-items: start;
+      transition: border-color 0.18s, transform 0.18s, box-shadow 0.18s;
+      position: relative;
+      overflow: hidden;
+    }
+    .article-card::before {
+      content: '';
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 3px;
+      border-radius: 3px 0 0 3px;
+    }
+    .article-card.cat-ai::before { background: var(--cat-ai); }
+    .article-card.cat-startup::before { background: var(--cat-startup); }
+    .article-card.cat-policy::before { background: var(--cat-policy); }
+    .article-card.cat-column::before { background: var(--cat-column); }
+    .article-card:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow);
+    }
+
+    .card-num {
+      width: 44px;
+      height: 44px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      font-weight: 900;
+      flex-shrink: 0;
+      color: white;
+    }
+    .cat-ai .card-num { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
+    .cat-startup .card-num { background: linear-gradient(135deg, #10b981, #047857); }
+    .cat-policy .card-num { background: linear-gradient(135deg, #f59e0b, #b45309); }
+    .cat-column .card-num { background: linear-gradient(135deg, #a855f7, #6d28d9); }
+
+    .card-body { min-width: 0; }
+
+    .card-meta {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+      flex-wrap: wrap;
+    }
+    .cat-tag {
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .cat-tag.ai { background: rgba(59,130,246,0.15); color: var(--cat-ai); }
+    .cat-tag.startup { background: rgba(16,185,129,0.15); color: var(--cat-startup); }
+    .cat-tag.policy { background: rgba(245,158,11,0.15); color: var(--cat-policy); }
+    .cat-tag.column { background: rgba(168,85,247,0.15); color: var(--cat-column); }
+    .time-tag { font-size: 11px; color: var(--ink3); }
+
+    .card-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--ink);
+      line-height: 1.4;
+      margin-bottom: 8px;
+      letter-spacing: -0.2px;
+    }
+    .card-summary {
+      font-size: 13.5px;
+      color: var(--ink2);
+      line-height: 1.6;
+      margin-bottom: 10px;
+    }
+    .card-url {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 12.5px;
+      color: var(--accent2);
+      text-decoration: none;
+      word-break: break-all;
+    }
+    .card-url:hover { text-decoration: underline; }
+
+    .card-scores {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .final-score {
+      font-size: 28px;
+      font-weight: 900;
+      letter-spacing: -1px;
+      line-height: 1;
+    }
+    .score-90 { color: #34d399; }
+    .score-80 { color: #60a5fa; }
+    .score-70 { color: #fbbf24; }
+    .score-low { color: var(--ink3); }
+    .score-label { font-size: 10px; color: var(--ink3); text-align: right; font-weight: 500; }
+    .score-badge {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 3px 9px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .score-badge.excellent { background: rgba(52,211,153,0.15); color: #34d399; }
+    .score-badge.priority { background: rgba(96,165,250,0.15); color: #60a5fa; }
+    .score-badge.review { background: rgba(251,191,36,0.15); color: #fbbf24; }
+    .score-badge.skip { background: rgba(100,116,139,0.15); color: var(--ink3); }
+
+    /* ── EMPTY STATE ── */
+    .empty-state {
+      text-align: center;
+      padding: 80px 40px;
+      color: var(--ink3);
+    }
+    .empty-icon {
+      font-size: 56px;
+      margin-bottom: 16px;
+      display: block;
+    }
+    .empty-state h3 { font-size: 18px; color: var(--ink2); margin-bottom: 8px; }
+    .empty-state p { font-size: 14px; }
+
+    /* ── PROGRESS BAR ── */
+    .progress-wrap {
+      height: 3px;
+      background: var(--surface2);
+      border-radius: 2px;
+      overflow: hidden;
+      margin-top: 14px;
+      display: none;
+    }
+    .progress-wrap.visible { display: block; }
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, #3b82f6, #a855f7);
+      border-radius: 2px;
+      transition: width 0.3s ease;
+      width: 0%;
+    }
+
+    /* ── NOTIFICATION TOAST ── */
+    .toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: none;
+    }
+    .toast {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 18px;
+      font-size: 13.5px;
+      color: var(--ink);
+      box-shadow: var(--shadow);
+      animation: slideIn 0.25s ease;
+      pointer-events: all;
+      max-width: 320px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .toast.success { border-color: var(--green); }
+    .toast.error { border-color: var(--red); }
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes slideOut {
+      from { transform: translateX(0); opacity: 1; }
+      to { transform: translateX(100%); opacity: 0; }
+    }
+    .toast.removing { animation: slideOut 0.25s ease forwards; }
+
+    /* ── DIVIDER ── */
+    .section-divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 8px 0 16px;
+    }
+    .divider-line { flex: 1; height: 1px; background: var(--border); }
+    .divider-text { font-size: 11px; color: var(--ink3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; }
+
+    /* ── KEYWORD CHIPS ── */
+    .keyword-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 10px;
+    }
+    .chip {
+      padding: 4px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 500;
+      background: rgba(59,130,246,0.1);
+      color: var(--accent2);
+      border: 1px solid rgba(59,130,246,0.2);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .chip:hover {
+      background: rgba(59,130,246,0.2);
+      transform: scale(1.03);
+    }
+
+    @media (max-width: 1100px) { .stats-bar { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 860px) {
+      .control-grid { grid-template-columns: 1fr 1fr; }
+      .stats-bar { grid-template-columns: repeat(2, 1fr); }
+      .article-card { grid-template-columns: 36px 1fr; }
+      .card-scores { flex-direction: row; align-items: center; grid-column: 1 / -1; }
+      .container { padding: 16px; }
+    }
+    @media (max-width: 560px) {
+      .control-grid { grid-template-columns: 1fr; }
+      .hero { padding: 18px 16px; }
+      .hero-inner { flex-direction: column; }
+    }
   </style>
 </head>
 <body>
-  <main>
-    <header>
-      <div>
-        <h1>aimax-004-v1-codex</h1>
-        <p class="muted">Static HTML collector for quick policy article preview and export. It uses Jina Reader as a browser-friendly fetch fallback.</p>
-      </div>
-      <div class="actions">
-        <button class="secondary" id="downloadJson">JSON</button>
-        <button class="secondary" id="downloadCsv">CSV</button>
-        <button class="secondary" id="downloadMd">Markdown</button>
-      </div>
-    </header>
 
-    <section class="panel">
-      <div class="controls">
-        <label>Source
-          <select id="source">
-            <option value="all">All default sources</option>
-            <option value="policy_briefing">Policy Briefing</option>
-            <option value="bizinfo">Bizinfo</option>
-            <option value="work24">Work24</option>
-            <option value="public_data">Public Data Portal</option>
-            <option value="custom">Custom URLs only</option>
-          </select>
-        </label>
-        <label>Max pages per source
-          <input id="maxPages" type="number" min="1" max="20" value="5" />
-        </label>
-        <label>Timeout seconds
-          <input id="timeout" type="number" min="5" max="60" value="20" />
-        </label>
-        <label>Discovery
-          <select id="discovery">
-            <option value="on">Seed + discovered links</option>
-            <option value="off">Seed URLs only</option>
-          </select>
-        </label>
+<header class="hero">
+  <div class="hero-inner">
+    <div class="brand">
+      <div class="brand-logo">CN</div>
+      <div class="brand-text">
+        <h1>COA NEWS AI Content Engine</h1>
+        <p>AI 비즈니스 · 창업 · 정책·지원사업 소재 자동 수집 · 점수화 · 엑셀 정리</p>
       </div>
-      <label style="margin-top:12px">Custom URLs, one per line
-        <textarea id="customUrls" placeholder="https://example.com/news/list"></textarea>
-      </label>
-      <div class="actions" style="margin-top:12px">
-        <button class="primary" id="run">Collect</button>
-        <button class="secondary" id="clear">Clear</button>
+    </div>
+    <div class="hero-actions">
+      <button class="btn btn-ghost btn-sm" id="btnExportXlsx">📊 엑셀 다운로드</button>
+      <button class="btn btn-ghost btn-sm" id="btnExportCsv">📋 CSV 다운로드</button>
+      <button class="btn btn-ghost btn-sm" id="btnExportMd">📝 소재목록 복사</button>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+
+  <!-- Stats -->
+  <div class="stats-bar">
+    <div class="stat-card blue">
+      <div class="stat-number" id="statTotal">0</div>
+      <div class="stat-label">수집 건수</div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-number" id="statHigh">0</div>
+      <div class="stat-label">즉시 기사 (90+)</div>
+    </div>
+    <div class="stat-card orange">
+      <div class="stat-number" id="statMid">0</div>
+      <div class="stat-label">우선 검토 (80~89)</div>
+    </div>
+    <div class="stat-card red">
+      <div class="stat-number" id="statFail">0</div>
+      <div class="stat-label">수집 실패</div>
+    </div>
+    <div class="stat-card purple">
+      <div class="stat-number" id="statElapsed">0s</div>
+      <div class="stat-label">경과 시간</div>
+    </div>
+  </div>
+
+  <!-- Control Panel -->
+  <div class="control-panel">
+    <div class="control-grid">
+      <div class="field">
+        <label>카테고리</label>
+        <select id="selCategory">
+          <option value="all">전체 카테고리</option>
+          <option value="ai">🤖 AI 비즈니스</option>
+          <option value="startup">🚀 창업·부업</option>
+          <option value="policy">🏛️ 정책·지원사업</option>
+          <option value="column">✍️ 현장 칼럼</option>
+        </select>
       </div>
-    </section>
+      <div class="field">
+        <label>소스 범위</label>
+        <select id="selSource">
+          <option value="all">기본 소스 전체</option>
+          <option value="ai_official">AI 공식 블로그</option>
+          <option value="ai_community">AI 커뮤니티/SNS</option>
+          <option value="startup_kr">창업 정보 (한국)</option>
+          <option value="policy_kr">정책·지원사업</option>
+          <option value="custom">커스텀 URL 전용</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>페이지당 최대 수집</label>
+        <input id="inpMaxPages" type="number" min="1" max="30" value="8" />
+      </div>
+      <div class="field">
+        <label>점수 필터 (최소)</label>
+        <select id="selScoreMin">
+          <option value="0">전체 (0점 이상)</option>
+          <option value="70">70점 이상</option>
+          <option value="80">80점 이상 (우선 검토)</option>
+          <option value="90">90점 이상 (즉시 기사)</option>
+        </select>
+      </div>
+    </div>
 
-    <section class="stats">
-      <div class="stat"><strong id="count">0</strong><span class="muted">Collected</span></div>
-      <div class="stat"><strong id="failures">0</strong><span class="muted">Failures</span></div>
-      <div class="stat"><strong id="skipped">0</strong><span class="muted">Duplicates</span></div>
-      <div class="stat"><strong id="elapsed">0s</strong><span class="muted">Elapsed</span></div>
-    </section>
+    <div class="field" style="margin-bottom:14px;">
+      <label>커스텀 URL (줄별 입력)</label>
+      <textarea id="inpCustomUrls" placeholder="https://openai.com/news&#10;https://www.yna.co.kr/view/AKR...&#10;https://www.mss.go.kr/..."></textarea>
+    </div>
 
-    <p id="status" class="muted">Ready.</p>
-    <section id="results" class="grid"></section>
-  </main>
+    <div class="section-divider">
+      <div class="divider-line"></div>
+      <div class="divider-text">추천 키워드</div>
+      <div class="divider-line"></div>
+    </div>
+    <div class="keyword-chips" id="keywordChips"></div>
 
-  <script>
-    const SOURCES = {
-      policy_briefing: { name: 'Policy Briefing', urls: ['https://www.korea.kr/briefing/pressReleaseList.do'] },
-      bizinfo: { name: 'Bizinfo', urls: ['https://www.bizinfo.go.kr/web/lay1/bbs/S1T122C128/AS/74/list.do'] },
-      work24: { name: 'Work24', urls: ['https://www.work24.go.kr'] },
-      public_data: { name: 'Public Data Portal', urls: ['https://www.data.go.kr'] }
+    <div style="margin-top: 16px;">
+      <div class="progress-wrap" id="progressWrap">
+        <div class="progress-bar" id="progressBar"></div>
+      </div>
+    </div>
+
+    <div class="control-actions" style="margin-top: 16px;">
+      <button class="btn btn-primary btn-lg" id="btnCollect">
+        ⚡ 소재 수집 시작
+      </button>
+      <button class="btn btn-danger btn-sm" id="btnClear">🗑️ 초기화</button>
+      <div class="status-pill" id="statusPill">
+        <span class="pulse" style="display:none;" id="pulseEl"></span>
+        <span id="statusText">수집 준비 완료. 소재 수집 시작을 누르세요.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter Bar -->
+  <div class="filter-bar">
+    <span class="filter-label">필터:</span>
+    <button class="cat-btn active-all" data-cat="all" id="fAll">전체</button>
+    <button class="cat-btn" data-cat="ai" id="fAi">🤖 AI 비즈니스</button>
+    <button class="cat-btn" data-cat="startup" id="fStartup">🚀 창업·부업</button>
+    <button class="cat-btn" data-cat="policy" id="fPolicy">🏛️ 정책·지원사업</button>
+    <button class="cat-btn" data-cat="column" id="fColumn">✍️ 현장 칼럼</button>
+    <select class="sort-select" id="selSort">
+      <option value="score">점수 높은 순</option>
+      <option value="time">최신 순</option>
+      <option value="alpha">제목 가나다순</option>
+    </select>
+  </div>
+
+  <!-- Results -->
+  <div class="results-header">
+    <div>
+      <span class="results-title">수집된 소재</span>
+      <span class="results-count" id="resultCount">— 건</span>
+    </div>
+    <div class="export-group">
+      <button class="btn btn-green btn-sm" id="btnExportXlsx2">📊 엑셀 저장</button>
+      <button class="btn btn-orange btn-sm" id="btnExportCsv2">📋 CSV 저장</button>
+      <button class="btn btn-purple btn-sm" id="btnExportMd2">📝 소재목록 Markdown</button>
+    </div>
+  </div>
+
+  <div class="cards-grid" id="cardsGrid">
+    <div class="empty-state">
+      <span class="empty-icon">📡</span>
+      <h3>아직 수집된 소재가 없습니다</h3>
+      <p>카테고리와 소스를 선택한 뒤 "소재 수집 시작" 버튼을 누르세요.</p>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+// ══════════════════════════════════════════════════════
+//  COA NEWS AI Content Engine — Core Logic
+// ══════════════════════════════════════════════════════
+
+const KEYWORDS = {
+  ai: ['ChatGPT 활용법', 'Claude 업무', 'Gemini 마케팅', 'AI Agent', 'AI 직원', 'AI 자동화',
+       'AI SaaS', 'AI 챗봇', 'AI 생산성', 'Copilot 활용', 'Perplexity 검색', 'AI Workflow',
+       '생성형 AI 비즈니스', 'AI 마케팅 자동화', 'Grok 활용법'],
+  startup: ['무자본 창업', 'SaaS 창업', '1인기업', '직장인 부업', '디지털노마드', '전자책 판매',
+            '스마트스토어 창업', '프리랜서 수익', '온라인 수익화', '소자본 창업', '퇴직자 부업'],
+  policy: ['소상공인 지원금', '창업지원금', '정책자금', '고용지원금', '청년창업 지원',
+           '중소기업 지원', '디지털전환 지원', '수출지원', '지역화폐', '재창업 지원'],
+  column: ['창업 실패 사례', 'AI 활용 경험', '매출 증가 전략', '고객 확보 방법', '업무 자동화 경험',
+           '마케팅 전략 노하우', '성공 창업 스토리']
+};
+
+const SOURCES = {
+  ai_official: [
+    { name: 'OpenAI Blog',      url: 'https://openai.com/news/',          cat: 'ai' },
+    { name: 'Anthropic News',   url: 'https://www.anthropic.com/news',    cat: 'ai' },
+    { name: 'Google AI Blog',   url: 'https://blog.google/technology/ai/','cat': 'ai' },
+    { name: 'Microsoft AI Blog',url: 'https://blogs.microsoft.com/ai/',   cat: 'ai' },
+    { name: 'AWS ML Blog',      url: 'https://aws.amazon.com/ko/blogs/machine-learning/', cat: 'ai' },
+  ],
+  ai_community: [
+    { name: 'HackerNews AI',    url: 'https://hn.algolia.com/?q=AI+agent&tags=story', cat: 'ai' },
+    { name: 'Reddit ClaudeAI',  url: 'https://www.reddit.com/r/ClaudeAI/hot/', cat: 'ai' },
+    { name: 'Reddit ChatGPT',   url: 'https://www.reddit.com/r/ChatGPT/hot/',  cat: 'ai' },
+    { name: 'GitHub AI Trending', url: 'https://github.com/trending?since=daily&spoken_language_code=', cat: 'ai' },
+  ],
+  startup_kr: [
+    { name: '창업진흥원',       url: 'https://www.kised.or.kr/board.es?mid=a10305000000', cat: 'startup' },
+    { name: 'Bizinfo 창업',     url: 'https://www.bizinfo.go.kr/web/lay1/bbs/S1T122C128/AS/74/list.do', cat: 'startup' },
+    { name: '소상공인진흥공단', url: 'https://www.semas.or.kr/web/main/index.kmdc', cat: 'startup' },
+  ],
+  policy_kr: [
+    { name: '정책브리핑',       url: 'https://www.korea.kr/briefing/pressReleaseList.do', cat: 'policy' },
+    { name: '중소벤처기업부',   url: 'https://www.mss.go.kr/site/smba/main.do', cat: 'policy' },
+    { name: '고용노동부',       url: 'https://www.moel.go.kr/news/enews/list.do', cat: 'policy' },
+    { name: 'Work24',           url: 'https://www.work24.go.kr', cat: 'policy' },
+  ]
+};
+
+const CAT_META = {
+  ai:      { label: 'AI 비즈니스', emoji: '🤖', cls: 'ai' },
+  startup: { label: '창업·부업',   emoji: '🚀', cls: 'startup' },
+  policy:  { label: '정책·지원사업', emoji: '🏛️', cls: 'policy' },
+  column:  { label: '현장 칼럼',  emoji: '✍️', cls: 'column' },
+};
+
+// ── AI SCORING ENGINE ──────────────────────────────────
+function scoreArticle(item) {
+  const text = (item.title + ' ' + item.summary).toLowerCase();
+
+  // Traffic score (검색 유입 가능성)
+  let traffic = 40;
+  const highTrafficKw = ['chatgpt', 'claude', 'gemini', 'ai', '창업', '지원금', '부업', '자동화', '지원사업', '정책자금'];
+  highTrafficKw.forEach(kw => { if (text.includes(kw)) traffic = Math.min(100, traffic + 8); });
+
+  // Revenue score (광고 수익성)
+  let revenue = 35;
+  const revKw = ['비즈니스', 'saas', '수익', '창업', '부업', '판매', '마케팅', '고객', '매출', '지원금'];
+  revKw.forEach(kw => { if (text.includes(kw)) revenue = Math.min(100, revenue + 7); });
+
+  // Practical score (실무 활용성)
+  let practical = 45;
+  const practKw = ['활용법', '방법', '전략', '노하우', '가이드', '사례', '경험', '자동화', '최적화', '팁'];
+  practKw.forEach(kw => { if (text.includes(kw)) practical = Math.min(100, practical + 8); });
+
+  // Freshness (최신성) — based on source recency indicator
+  const freshness = item.freshness || 75;
+
+  const final = Math.round(
+    traffic * 0.4 + revenue * 0.3 + practical * 0.2 + freshness * 0.1
+  );
+
+  return { traffic, revenue, practical, freshness, final };
+}
+
+function scoreBadge(score) {
+  if (score >= 90) return { cls: 'excellent', text: '🔥 즉시 기사 작성' };
+  if (score >= 80) return { cls: 'priority',  text: '⭐ 우선 검토' };
+  if (score >= 70) return { cls: 'review',    text: '📋 보관' };
+  return             { cls: 'skip',       text: '⛔ 제외' };
+}
+
+function scoreColorCls(score) {
+  if (score >= 90) return 'score-90';
+  if (score >= 80) return 'score-80';
+  if (score >= 70) return 'score-70';
+  return 'score-low';
+}
+
+// ── STATE ─────────────────────────────────────────────
+let allArticles = [];
+let filterCat   = 'all';
+let failureCount = 0;
+let collecting  = false;
+let startTime   = null;
+
+// ── DOM ───────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+const grid = $('cardsGrid');
+
+// ── INIT ──────────────────────────────────────────────
+(function init() {
+  // keyword chips
+  const chips = $('keywordChips');
+  const allKws = [...KEYWORDS.ai.slice(0,5), ...KEYWORDS.startup.slice(0,4), ...KEYWORDS.policy.slice(0,4)];
+  allKws.forEach(kw => {
+    const el = document.createElement('span');
+    el.className = 'chip';
+    el.textContent = kw;
+    el.onclick = () => {
+      const cur = $('inpCustomUrls').value.trim();
+      $('inpCustomUrls').value = (cur ? cur + '\n' : '') + `https://search.naver.com/search.naver?query=${encodeURIComponent(kw)}`;
     };
+    chips.appendChild(el);
+  });
 
-    let articles = [];
-    let failureCount = 0;
-    let duplicateCount = 0;
+  // filter buttons
+  document.querySelectorAll('.cat-btn').forEach(btn => {
+    btn.onclick = () => {
+      filterCat = btn.dataset.cat;
+      document.querySelectorAll('.cat-btn').forEach(b => {
+        b.className = 'cat-btn';
+      });
+      btn.className = `cat-btn active-${filterCat}`;
+      renderCards();
+    };
+  });
 
-    const $ = (id) => document.getElementById(id);
-    $('run').onclick = collect;
-    $('clear').onclick = () => { articles = []; failureCount = 0; duplicateCount = 0; render(); setStatus('Ready.'); };
-    $('downloadJson').onclick = () => download('articles.json', JSON.stringify(articles, null, 2));
-    $('downloadCsv').onclick = () => download('articles.csv', toCsv(articles));
-    $('downloadMd').onclick = () => download('articles.md', toMarkdown(articles));
+  $('selSort').onchange = renderCards;
 
-    async function collect() {
-      const started = Date.now();
-      articles = [];
-      failureCount = 0;
-      duplicateCount = 0;
-      render();
-      $('run').disabled = true;
-      setStatus('Collecting...');
+  $('btnCollect').onclick = startCollect;
+  $('btnClear').onclick = clearAll;
+
+  // Export buttons (both sets)
+  [$('btnExportXlsx'), $('btnExportXlsx2')].forEach(b => { b.onclick = exportXlsx; });
+  [$('btnExportCsv'),  $('btnExportCsv2')].forEach(b => {  b.onclick = exportCsv;  });
+  [$('btnExportMd'),   $('btnExportMd2')].forEach(b => {   b.onclick = exportMarkdown; });
+})();
+
+// ── COLLECT ───────────────────────────────────────────
+async function startCollect() {
+  if (collecting) return;
+  collecting = true;
+  startTime = Date.now();
+  failureCount = 0;
+  allArticles = [];
+  setStatus('running', '소재 수집 중...');
+  $('btnCollect').disabled = true;
+  $('progressWrap').classList.add('visible');
+  setProgress(5);
+  renderCards();
+  renderStats();
+
+  try {
+    const seeds = getSeeds();
+    const maxPages = parseInt($('inpMaxPages').value) || 8;
+    const seen = new Set();
+    const total = seeds.length;
+    let done = 0;
+
+    for (const seed of seeds) {
+      setStatus('running', `🔍 수집 중: ${seed.name}`);
+      setProgress(5 + Math.round((done / total) * 85));
       try {
-        const seeds = selectedSeeds();
-        const maxPages = Number($('maxPages').value || 5);
-        const timeoutMs = Number($('timeout').value || 20) * 1000;
-        const seenHashes = new Set();
-        for (const seed of seeds) {
-          setStatus(`Discovering ${seed.name}...`);
-          const urls = await discoverUrls(seed, maxPages, timeoutMs);
-          for (const url of urls.slice(0, maxPages)) {
-            setStatus(`Fetching ${url}`);
-            const article = await collectOne(seed, url, timeoutMs);
-            if (!article) { failureCount += 1; renderStats(started); continue; }
-            if (seenHashes.has(article.content_hash)) { duplicateCount += 1; renderStats(started); continue; }
-            seenHashes.add(article.content_hash);
-            articles.push(article);
-            render(started);
-          }
+        const urls = await discoverUrls(seed, maxPages);
+        for (const url of urls.slice(0, maxPages)) {
+          const article = await fetchArticle(seed, url);
+          if (!article) { failureCount++; renderStats(); continue; }
+          const key = article.title.toLowerCase().trim();
+          if (seen.has(key)) continue;
+          seen.add(key);
+          const scores = scoreArticle(article);
+          allArticles.push({ ...article, ...scores });
+          renderStats();
+          renderCards();
         }
-        setStatus('Done.');
-      } catch (error) {
-        setStatus(String(error), true);
-      } finally {
-        $('run').disabled = false;
-        renderStats(started);
+      } catch (e) {
+        failureCount++;
+        renderStats();
       }
+      done++;
+      setProgress(5 + Math.round((done / total) * 85));
     }
 
-    function selectedSeeds() {
-      const selected = $('source').value;
-      const custom = $('customUrls').value.split(/\r?\n/).map(v => v.trim()).filter(Boolean);
-      const seeds = [];
-      if (selected === 'all') {
-        Object.entries(SOURCES).forEach(([type, source]) => seeds.push({ type, name: source.name, urls: source.urls }));
-      } else if (selected !== 'custom') {
-        const source = SOURCES[selected];
-        seeds.push({ type: selected, name: source.name, urls: source.urls });
-      }
-      if (custom.length) seeds.push({ type: 'custom', name: 'Custom', urls: custom });
-      return seeds;
+    setProgress(100);
+    setStatus('done', `✅ 수집 완료 — ${allArticles.length}건`);
+    toast(`${allArticles.length}건 수집 완료! 엑셀로 저장하세요.`, 'success');
+  } catch (e) {
+    setStatus('error', '❌ 오류: ' + e.message);
+    toast(e.message, 'error');
+  } finally {
+    $('btnCollect').disabled = false;
+    $('progressWrap').classList.remove('visible');
+    collecting = false;
+  }
+}
+
+function getSeeds() {
+  const selCat = $('selCategory').value;
+  const selSrc = $('selSource').value;
+  const customRaw = $('inpCustomUrls').value.split(/\r?\n/).map(v => v.trim()).filter(Boolean);
+
+  let sourceSets = [];
+  if (selSrc === 'all') {
+    sourceSets = Object.values(SOURCES).flat();
+  } else if (SOURCES[selSrc]) {
+    sourceSets = SOURCES[selSrc];
+  } else if (selSrc === 'custom') {
+    sourceSets = [];
+  }
+
+  // category filter
+  let seeds = selCat === 'all' ? sourceSets : sourceSets.filter(s => s.cat === selCat);
+
+  // custom URLs
+  customRaw.forEach(url => {
+    seeds.push({ name: '커스텀', url, cat: selCat === 'all' ? 'column' : selCat });
+  });
+
+  return seeds;
+}
+
+async function discoverUrls(seed, maxPages) {
+  const urls = [seed.url];
+  try {
+    const text = await jinaFetch(seed.url, 15000);
+    const found = extractUrls(text, seed.url);
+    found.slice(0, maxPages - 1).forEach(u => { if (!urls.includes(u)) urls.push(u); });
+  } catch (_) {}
+  return urls;
+}
+
+async function fetchArticle(seed, url) {
+  try {
+    const text = await jinaFetch(url, 18000);
+    if (!text || text.length < 100) return null;
+    const title = extractTitle(text) || seed.name;
+    const summary = extractSummary(text, title);
+    if (!summary) return null;
+    return {
+      category: seed.cat,
+      source_name: seed.name,
+      title,
+      summary,
+      url,
+      fetched_at: new Date().toISOString(),
+      freshness: computeFreshness(text),
+    };
+  } catch (_) {
+    return null;
+  }
+}
+
+async function jinaFetch(url, timeoutMs) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const readerUrl = 'https://r.jina.ai/' + url;
+    const res = await fetch(readerUrl, { signal: controller.signal });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return await res.text();
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function extractTitle(text) {
+  const lines = text.split('\n');
+  const titleLine = lines.find(l => /^Title:\s*/i.test(l));
+  if (titleLine) return titleLine.replace(/^Title:\s*/i, '').trim().slice(0, 80);
+  const h1 = lines.find(l => /^#\s+/.test(l));
+  if (h1) return h1.replace(/^#+\s+/, '').trim().slice(0, 80);
+  const nonEmpty = lines.find(l => l.trim().length > 20 && !l.startsWith('http'));
+  return nonEmpty ? nonEmpty.trim().slice(0, 80) : '';
+}
+
+function extractSummary(text, title) {
+  const clean = text
+    .replace(/https?:\/\/\S+/g, '')
+    .replace(/[#*>`|]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  // Find a sentence after the title
+  const idx = clean.toLowerCase().indexOf(title.toLowerCase().slice(0, 20));
+  const start = idx >= 0 ? idx + title.length : 0;
+  const snippet = clean.slice(start, start + 500).trim();
+  const sentences = snippet.match(/[^.!?。]{15,}[.!?。]/g) || [];
+  if (sentences.length >= 1) return sentences.slice(0, 2).join(' ').trim().slice(0, 200);
+  return snippet.slice(0, 180) || clean.slice(0, 180);
+}
+
+function extractUrls(text, baseUrl) {
+  let base;
+  try { base = new URL(baseUrl); } catch { return []; }
+  const matches = text.match(/https?:\/\/[^\s)"']+/g) || [];
+  return [...new Set(matches)].filter(u => {
+    try {
+      const p = new URL(u);
+      return p.hostname === base.hostname &&
+        !/\.(jpg|jpeg|png|gif|webp|svg|css|js|pdf|zip|hwp)$/i.test(p.pathname);
+    } catch { return false; }
+  }).sort((a, b) => urlScore(b) - urlScore(a));
+}
+
+function urlScore(url) {
+  const l = url.toLowerCase();
+  let s = 0;
+  ['view', 'detail', 'article', 'notice', 'news', 'press', 'bbs', 'board'].forEach(t => { if (l.includes(t)) s += 2; });
+  if (/[?&](seq|id|no|ntt|article|dataid)=/i.test(l)) s += 3;
+  return s;
+}
+
+function computeFreshness(text) {
+  const today = new Date();
+  const year = today.getFullYear();
+  const recentYear = new RegExp(`${year}|${year - 1}`);
+  return recentYear.test(text) ? 85 : 65;
+}
+
+// ── RENDER ────────────────────────────────────────────
+function renderCards() {
+  let items = [...allArticles];
+  const minScore = parseInt($('selScoreMin').value) || 0;
+  if (filterCat !== 'all') items = items.filter(a => a.category === filterCat);
+  items = items.filter(a => a.final >= minScore);
+
+  const sort = $('selSort').value;
+  if (sort === 'score') items.sort((a, b) => b.final - a.final);
+  else if (sort === 'time') items.sort((a, b) => b.fetched_at.localeCompare(a.fetched_at));
+  else items.sort((a, b) => a.title.localeCompare(b.title, 'ko'));
+
+  $('resultCount').textContent = `— ${items.length}건`;
+
+  if (items.length === 0) {
+    if (allArticles.length === 0) {
+      grid.innerHTML = `<div class="empty-state">
+        <span class="empty-icon">📡</span>
+        <h3>아직 수집된 소재가 없습니다</h3>
+        <p>카테고리와 소스를 선택한 뒤 "소재 수집 시작" 버튼을 누르세요.</p>
+      </div>`;
+    } else {
+      grid.innerHTML = `<div class="empty-state">
+        <span class="empty-icon">🔍</span>
+        <h3>필터 조건에 맞는 소재가 없습니다</h3>
+        <p>카테고리 또는 점수 필터를 조정해 보세요.</p>
+      </div>`;
     }
+    return;
+  }
 
-    async function discoverUrls(seed, maxPages, timeoutMs) {
-      const urls = [];
-      const seen = new Set();
-      for (const seedUrl of seed.urls) {
-        addUrl(urls, seen, seedUrl);
-        if ($('discovery').value === 'off') continue;
-        const text = await fetchViaReader(seedUrl, timeoutMs).catch(() => '');
-        for (const candidate of extractCandidateUrls(text, seedUrl)) {
-          if (urls.length >= maxPages) break;
-          addUrl(urls, seen, candidate);
-        }
-      }
-      return urls;
-    }
+  grid.innerHTML = items.map((a, i) => {
+    const cm = CAT_META[a.category] || CAT_META.column;
+    const badge = scoreBadge(a.final);
+    const scCls = scoreColorCls(a.final);
+    const timeStr = a.fetched_at ? new Date(a.fetched_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : '';
+    return `
+    <article class="article-card cat-${a.category}" id="card-${i}">
+      <div class="card-num">${i + 1}</div>
+      <div class="card-body">
+        <div class="card-meta">
+          <span class="cat-tag ${cm.cls}">${cm.emoji} ${cm.label}</span>
+          <span class="time-tag">${a.source_name}</span>
+          ${timeStr ? `<span class="time-tag">${timeStr}</span>` : ''}
+        </div>
+        <div class="card-title">${escHtml(a.title)}</div>
+        <div class="card-summary">${escHtml(a.summary)}</div>
+        <a class="card-url" href="${escHtml(a.url)}" target="_blank" rel="noopener">
+          🔗 ${escHtml(a.url)}
+        </a>
+      </div>
+      <div class="card-scores">
+        <div>
+          <div class="final-score ${scCls}">${a.final}</div>
+          <div class="score-label">최종점수</div>
+        </div>
+        <div class="score-badge ${badge.cls}">${badge.text}</div>
+      </div>
+    </article>`;
+  }).join('');
+}
 
-    async function collectOne(seed, url, timeoutMs) {
-      try {
-        const text = await fetchViaReader(url, timeoutMs);
-        const title = extractTitle(text) || seed.name;
-        const body = normalizeText(text).slice(0, 12000);
-        if (!body) return null;
-        return {
-          source_type: seed.type,
-          source_name: seed.name,
-          title,
-          url,
-          raw_content: body,
-          content_hash: await sha256(`${title.toLowerCase()}\n${body}`),
-          fetched_at: new Date().toISOString(),
-          strategy: 'jina_reader_static_html'
-        };
-      } catch (_) {
-        return null;
-      }
-    }
+function renderStats() {
+  const elapsed = startTime ? Math.round((Date.now() - startTime) / 1000) : 0;
+  $('statTotal').textContent = allArticles.length;
+  $('statHigh').textContent  = allArticles.filter(a => a.final >= 90).length;
+  $('statMid').textContent   = allArticles.filter(a => a.final >= 80 && a.final < 90).length;
+  $('statFail').textContent  = failureCount;
+  $('statElapsed').textContent = elapsed + 's';
+}
 
-    async function fetchViaReader(url, timeoutMs) {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), timeoutMs);
-      try {
-        const readerUrl = 'https://r.jina.ai/http://' + url.replace(/^https?:\/\//, '');
-        const response = await fetch(readerUrl, { signal: controller.signal });
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
-        return await response.text();
-      } finally {
-        clearTimeout(timer);
-      }
-    }
+// ── EXPORTS ───────────────────────────────────────────
+function getExportItems() {
+  let items = [...allArticles].sort((a, b) => b.final - a.final);
+  const minScore = parseInt($('selScoreMin').value) || 0;
+  return items.filter(a => a.final >= minScore);
+}
 
-    function extractCandidateUrls(text, baseUrl) {
-      const base = new URL(baseUrl);
-      const matches = text.match(/https?:\/\/[^\s)\]"']+/g) || [];
-      return [...new Set(matches)]
-        .filter(url => {
-          try {
-            const parsed = new URL(url);
-            return parsed.hostname === base.hostname && !/\.(jpg|jpeg|png|gif|webp|svg|css|js|pdf|zip|hwp|hwpx|xlsx?)$/i.test(parsed.pathname);
-          } catch { return false; }
-        })
-        .sort((a, b) => scoreUrl(b) - scoreUrl(a));
-    }
+function exportXlsx() {
+  const items = getExportItems();
+  if (!items.length) { toast('수집된 소재가 없습니다.', 'error'); return; }
 
-    function scoreUrl(url) {
-      const lower = url.toLowerCase();
-      let score = 0;
-      ['view', 'detail', 'article', 'notice', 'bbs', 'board', 'press', 'news'].forEach(t => { if (lower.includes(t)) score += 2; });
-      if (/[?&](seq|id|no|ntt|bbs|article|dataid)=/i.test(lower)) score += 3;
-      return score;
-    }
+  const headers = ['#', '카테고리', '제목', '요약', 'URL', '검색유입(40%)', '광고수익(30%)', '실무활용(20%)', '최신성(10%)', '최종점수', '등급', '수집시각'];
+  const rows = items.map((a, i) => {
+    const badge = scoreBadge(a.final);
+    const cm = CAT_META[a.category] || CAT_META.column;
+    return [
+      i + 1,
+      cm.label,
+      a.title,
+      a.summary,
+      a.url,
+      a.traffic,
+      a.revenue,
+      a.practical,
+      a.freshness,
+      a.final,
+      badge.text.replace(/[🔥⭐📋⛔]/g, '').trim(),
+      a.fetched_at ? new Date(a.fetched_at).toLocaleString('ko-KR') : ''
+    ];
+  });
 
-    function extractTitle(text) {
-      const titleLine = text.split('\n').find(line => /^Title:\s*/i.test(line));
-      if (titleLine) return titleLine.replace(/^Title:\s*/i, '').trim().slice(0, 180);
-      const heading = text.split('\n').find(line => /^#\s+/.test(line));
-      return heading ? heading.replace(/^#\s+/, '').trim().slice(0, 180) : '';
-    }
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
 
-    function addUrl(urls, seen, url) {
-      const normalized = url.split('#')[0].trim();
-      if (!normalized || seen.has(normalized)) return;
-      seen.add(normalized);
-      urls.push(normalized);
-    }
+  // Column widths
+  ws['!cols'] = [
+    {wch: 4}, {wch: 14}, {wch: 45}, {wch: 60}, {wch: 55},
+    {wch: 10}, {wch: 10}, {wch: 10}, {wch: 8}, {wch: 8}, {wch: 12}, {wch: 18}
+  ];
 
-    function normalizeText(value) { return String(value || '').replace(/\s+/g, ' ').trim(); }
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'COA NEWS 소재');
 
-    async function sha256(value) {
-      const data = new TextEncoder().encode(value);
-      const hash = await crypto.subtle.digest('SHA-256', data);
-      return [...new Uint8Array(hash)].map(b => b.toString(16).padStart(2, '0')).join('');
-    }
+  // Summary sheet
+  const cats = ['ai', 'startup', 'policy', 'column'];
+  const summaryData = [
+    ['COA NEWS AI Content Engine — 수집 요약', '', ''],
+    ['수집 일시', new Date().toLocaleString('ko-KR'), ''],
+    ['', '', ''],
+    ['카테고리', '수집건수', '평균점수'],
+    ...cats.map(c => {
+      const catItems = items.filter(a => a.category === c);
+      const avg = catItems.length ? Math.round(catItems.reduce((s, a) => s + a.final, 0) / catItems.length) : 0;
+      return [CAT_META[c].label, catItems.length, avg];
+    }),
+    ['', '', ''],
+    ['전체 합계', items.length, items.length ? Math.round(items.reduce((s, a) => s + a.final, 0) / items.length) : 0],
+    ['즉시 기사 (90+)', items.filter(a => a.final >= 90).length, ''],
+    ['우선 검토 (80~89)', items.filter(a => a.final >= 80 && a.final < 90).length, ''],
+  ];
+  const ws2 = XLSX.utils.aoa_to_sheet(summaryData);
+  ws2['!cols'] = [{wch: 20}, {wch: 10}, {wch: 10}];
+  XLSX.utils.book_append_sheet(wb, ws2, '요약');
 
-    function render(started = Date.now()) {
-      renderStats(started);
-      $('results').innerHTML = articles.map(article => `
-        <article class="card">
-          <h3>${escapeHtml(article.title)}</h3>
-          <div class="meta"><span>${escapeHtml(article.source_type)}</span><span>${escapeHtml(article.strategy)}</span><span>${escapeHtml(article.fetched_at)}</span></div>
-          <p><a class="url" href="${article.url}" target="_blank">${article.url}</a></p>
-          <pre>${escapeHtml(article.raw_content.slice(0, 1200))}</pre>
-        </article>`).join('');
-    }
+  const dateStr = new Date().toISOString().slice(0, 10);
+  XLSX.writeFile(wb, `coa_news_소재_${dateStr}.xlsx`);
+  toast('엑셀 파일이 다운로드되었습니다! 📊', 'success');
+}
 
-    function renderStats(started) {
-      $('count').textContent = articles.length;
-      $('failures').textContent = failureCount;
-      $('skipped').textContent = duplicateCount;
-      $('elapsed').textContent = `${Math.max(0, Math.round((Date.now() - started) / 1000))}s`;
-    }
+function exportCsv() {
+  const items = getExportItems();
+  if (!items.length) { toast('수집된 소재가 없습니다.', 'error'); return; }
+  const headers = ['순번', '카테고리', '제목', '요약', 'URL', '검색유입', '광고수익', '실무활용', '최신성', '최종점수'];
+  const csvRows = [
+    headers.join(','),
+    ...items.map((a, i) => {
+      const cm = CAT_META[a.category] || CAT_META.column;
+      return [
+        i + 1,
+        csvCell(cm.label),
+        csvCell(a.title),
+        csvCell(a.summary),
+        csvCell(a.url),
+        a.traffic, a.revenue, a.practical, a.freshness, a.final
+      ].join(',');
+    })
+  ];
+  downloadFile(`coa_news_소재_${new Date().toISOString().slice(0,10)}.csv`, '\uFEFF' + csvRows.join('\n'), 'text/csv');
+  toast('CSV 파일이 다운로드되었습니다! 📋', 'success');
+}
 
-    function setStatus(text, isError = false) {
-      $('status').textContent = text;
-      $('status').className = isError ? 'error' : 'muted';
-    }
+function exportMarkdown() {
+  const items = getExportItems();
+  if (!items.length) { toast('수집된 소재가 없습니다.', 'error'); return; }
+  const dateStr = new Date().toLocaleDateString('ko-KR');
+  const lines = [
+    `# COA NEWS 소재 목록 — ${dateStr}`,
+    '',
+    `> 총 ${items.length}건 수집 | AI Content Engine 자동 생성`,
+    '',
+  ];
 
-    function download(filename, content) {
-      const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      a.click();
-      URL.revokeObjectURL(url);
-    }
+  items.forEach((a, i) => {
+    const cm = CAT_META[a.category] || CAT_META.column;
+    lines.push(`${i + 1}) ${a.title}`, '');
+    lines.push(`${a.summary}`);
+    lines.push(`🔗 ${a.url}`);
+    lines.push(`📊 점수: ${a.final}점 | ${cm.emoji} ${cm.label} | 출처: ${a.source_name}`);
+    lines.push('');
+  });
 
-    function toCsv(rows) {
-      const headers = ['source_type', 'title', 'url', 'strategy', 'content_hash', 'summary'];
-      const lines = [headers.join(',')];
-      rows.forEach(row => lines.push(headers.map(h => csvCell(h === 'summary' ? row.raw_content.slice(0, 240) : row[h])).join(',')));
-      return lines.join('\n');
-    }
+  const content = lines.join('\n');
+  downloadFile(`coa_news_소재_${new Date().toISOString().slice(0,10)}.md`, content, 'text/markdown');
 
-    function toMarkdown(rows) {
-      return ['# Collected Articles', '', ...rows.flatMap(row => [`## ${row.title}`, '', `- Source: ${row.source_type}`, `- URL: ${row.url}`, '', row.raw_content.slice(0, 2000), ''])].join('\n');
-    }
+  // Also copy to clipboard
+  navigator.clipboard.writeText(content).then(
+    () => toast('소재목록 복사 + Markdown 다운로드 완료! 📝', 'success'),
+    () => toast('Markdown 파일을 다운로드했습니다. 📝', 'success')
+  );
+}
 
-    function csvCell(value) { return `"${String(value || '').replace(/"/g, '""')}"`; }
-    function escapeHtml(value) { return String(value || '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
-  </script>
+// ── UTILITIES ─────────────────────────────────────────
+function clearAll() {
+  allArticles = [];
+  failureCount = 0;
+  startTime = null;
+  filterCat = 'all';
+  document.querySelectorAll('.cat-btn').forEach(b => b.className = 'cat-btn');
+  $('fAll').className = 'cat-btn active-all';
+  setStatus('ready', '초기화 완료. 다시 수집을 시작하세요.');
+  renderCards();
+  renderStats();
+}
+
+function setStatus(type, text) {
+  const pill = $('statusPill');
+  const pulse = $('pulseEl');
+  $('statusText').textContent = text;
+  pill.className = 'status-pill ' + (type === 'running' ? 'running' : type === 'done' ? 'done' : type === 'error' ? 'error' : '');
+  pulse.style.display = type === 'running' ? 'block' : 'none';
+}
+
+function setProgress(pct) {
+  $('progressBar').style.width = Math.min(100, Math.max(0, pct)) + '%';
+}
+
+function toast(msg, type = 'info') {
+  const tc = $('toastContainer');
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.innerHTML = `<span>${type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️'}</span><span>${escHtml(msg)}</span>`;
+  tc.appendChild(el);
+  setTimeout(() => {
+    el.classList.add('removing');
+    setTimeout(() => el.remove(), 300);
+  }, 4000);
+}
+
+function downloadFile(filename, content, mime) {
+  const blob = new Blob([content], { type: mime + ';charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
+
+function csvCell(v) { return `"${String(v || '').replace(/"/g, '""')}"`; }
+function escHtml(v) {
+  return String(v || '').replace(/[&<>'\"]/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+}
+
+// ── LIVE CLOCK ────────────────────────────────────────
+setInterval(renderStats, 1000);
+</script>
 </body>
 </html>
