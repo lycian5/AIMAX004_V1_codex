@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>COA NEWS — AI 소재 수집 엔진</title>
-  <meta name="description" content="COA NEWS AI Content Engine: AI 비즈니스·창업·정책·지원사업 소재를 자동 수집하고 점수화하여 엑셀로 정리합니다." />
+  <meta name="description" content="COA NEWS AI Content Engine: AI 비즈니스·창업·정책·지원사업 소재를 네이버·구글·Reddit·GitHub에서 자동 수집하고 점수화하여 엑셀로 정리합니다." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -27,647 +27,260 @@
       --purple: #a855f7;
       --pink: #ec4899;
       --teal: #14b8a6;
-
       --cat-ai: #3b82f6;
       --cat-startup: #10b981;
       --cat-policy: #f59e0b;
       --cat-column: #a855f7;
-
       --radius: 12px;
       --radius-sm: 8px;
       --shadow: 0 4px 24px rgba(0,0,0,0.4);
-      --shadow-sm: 0 2px 8px rgba(0,0,0,0.3);
     }
-
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--ink); font-family: 'Pretendard','Inter',-apple-system,sans-serif; min-height: 100vh; overflow-x: hidden; }
 
-    body {
-      background: var(--bg);
-      color: var(--ink);
-      font-family: 'Pretendard', 'Inter', -apple-system, sans-serif;
-      min-height: 100vh;
-      overflow-x: hidden;
-    }
+    /* HERO */
+    .hero { background: linear-gradient(135deg,#0b0f1a 0%,#0f1f3d 50%,#0b0f1a 100%); border-bottom: 1px solid var(--border); padding: 24px 32px 20px; position: relative; overflow: hidden; }
+    .hero::before { content:''; position:absolute; top:-60px; left:-60px; width:320px; height:320px; background:radial-gradient(circle,rgba(59,130,246,.15) 0%,transparent 70%); pointer-events:none; }
+    .hero::after  { content:''; position:absolute; bottom:-80px; right:10%; width:400px; height:400px; background:radial-gradient(circle,rgba(168,85,247,.08) 0%,transparent 70%); pointer-events:none; }
+    .hero-inner { max-width:1400px; margin:0 auto; display:flex; align-items:center; justify-content:space-between; gap:20px; flex-wrap:wrap; position:relative; z-index:1; }
+    .brand { display:flex; align-items:center; gap:14px; }
+    .brand-logo { width:50px; height:50px; background:linear-gradient(135deg,#3b82f6,#a855f7); border-radius:13px; display:flex; align-items:center; justify-content:center; font-size:20px; font-weight:900; color:white; letter-spacing:-1px; box-shadow:0 0 24px rgba(59,130,246,.4); flex-shrink:0; }
+    .brand-text h1 { font-size:24px; font-weight:800; background:linear-gradient(90deg,#e8edf5,#93c5fd); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; letter-spacing:-.5px; line-height:1.2; }
+    .brand-text p  { font-size:12px; color:var(--ink2); margin-top:3px; }
+    .hero-actions { display:flex; gap:8px; flex-wrap:wrap; }
 
-    /* ── HERO HEADER ── */
-    .hero {
-      background: linear-gradient(135deg, #0b0f1a 0%, #0f1f3d 50%, #0b0f1a 100%);
-      border-bottom: 1px solid var(--border);
-      padding: 28px 32px 24px;
-      position: relative;
-      overflow: hidden;
-    }
-    .hero::before {
-      content: '';
-      position: absolute;
-      top: -60px; left: -60px;
-      width: 320px; height: 320px;
-      background: radial-gradient(circle, rgba(59,130,246,0.15) 0%, transparent 70%);
-      pointer-events: none;
-    }
-    .hero::after {
-      content: '';
-      position: absolute;
-      bottom: -80px; right: 10%;
-      width: 400px; height: 400px;
-      background: radial-gradient(circle, rgba(168,85,247,0.08) 0%, transparent 70%);
-      pointer-events: none;
-    }
-    .hero-inner {
-      max-width: 1360px;
-      margin: 0 auto;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 24px;
-      flex-wrap: wrap;
-      position: relative;
-      z-index: 1;
-    }
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-    }
-    .brand-logo {
-      width: 52px; height: 52px;
-      background: linear-gradient(135deg, #3b82f6, #a855f7);
-      border-radius: 14px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 22px;
-      font-weight: 900;
-      color: white;
-      letter-spacing: -1px;
-      box-shadow: 0 0 24px rgba(59,130,246,0.4);
-      flex-shrink: 0;
-    }
-    .brand-text h1 {
-      font-size: 26px;
-      font-weight: 800;
-      background: linear-gradient(90deg, #e8edf5, #93c5fd);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      letter-spacing: -0.5px;
-      line-height: 1.2;
-    }
-    .brand-text p {
-      font-size: 13px;
-      color: var(--ink2);
-      margin-top: 3px;
-      letter-spacing: 0.3px;
-    }
-    .hero-actions {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
+    /* BUTTONS */
+    .btn { display:inline-flex; align-items:center; gap:6px; padding:8px 16px; border-radius:var(--radius-sm); font-size:13px; font-weight:600; cursor:pointer; border:none; transition:all .18s ease; font-family:inherit; white-space:nowrap; }
+    .btn-primary { background:linear-gradient(135deg,#3b82f6,#2563eb); color:white; box-shadow:0 0 16px rgba(59,130,246,.35); }
+    .btn-primary:hover:not(:disabled) { background:linear-gradient(135deg,#60a5fa,#3b82f6); box-shadow:0 0 26px rgba(59,130,246,.5); transform:translateY(-1px); }
+    .btn-primary:disabled { opacity:.5; cursor:not-allowed; }
+    .btn-ghost { background:rgba(255,255,255,.06); color:var(--ink2); border:1px solid var(--border); }
+    .btn-ghost:hover:not(:disabled) { background:rgba(255,255,255,.1); color:var(--ink); border-color:var(--accent); }
+    .btn-green  { background:linear-gradient(135deg,#10b981,#059669); color:white; box-shadow:0 0 12px rgba(16,185,129,.3); }
+    .btn-green:hover:not(:disabled)  { transform:translateY(-1px); box-shadow:0 0 20px rgba(16,185,129,.45); }
+    .btn-orange { background:linear-gradient(135deg,#f59e0b,#d97706); color:white; box-shadow:0 0 12px rgba(245,158,11,.3); }
+    .btn-orange:hover:not(:disabled) { transform:translateY(-1px); }
+    .btn-purple { background:linear-gradient(135deg,#a855f7,#7c3aed); color:white; box-shadow:0 0 12px rgba(168,85,247,.3); }
+    .btn-purple:hover:not(:disabled) { transform:translateY(-1px); }
+    .btn-danger { background:rgba(239,68,68,.12); color:#f87171; border:1px solid rgba(239,68,68,.3); }
+    .btn-danger:hover:not(:disabled) { background:rgba(239,68,68,.2); }
+    .btn-lg { padding:11px 24px; font-size:14px; border-radius:10px; }
+    .btn-sm { padding:5px 12px; font-size:12px; border-radius:6px; }
 
-    /* ── BUTTONS ── */
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 7px;
-      padding: 9px 18px;
-      border-radius: var(--radius-sm);
-      font-size: 13.5px;
-      font-weight: 600;
-      cursor: pointer;
-      border: none;
-      transition: all 0.18s ease;
-      font-family: inherit;
-      white-space: nowrap;
-      letter-spacing: 0.2px;
-    }
-    .btn-primary {
-      background: linear-gradient(135deg, #3b82f6, #2563eb);
-      color: white;
-      box-shadow: 0 0 18px rgba(59,130,246,0.35);
-    }
-    .btn-primary:hover:not(:disabled) {
-      background: linear-gradient(135deg, #60a5fa, #3b82f6);
-      box-shadow: 0 0 28px rgba(59,130,246,0.5);
-      transform: translateY(-1px);
-    }
-    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-    .btn-ghost {
-      background: rgba(255,255,255,0.06);
-      color: var(--ink2);
-      border: 1px solid var(--border);
-    }
-    .btn-ghost:hover:not(:disabled) {
-      background: rgba(255,255,255,0.1);
-      color: var(--ink);
-      border-color: var(--accent);
-    }
-    .btn-green {
-      background: linear-gradient(135deg, #10b981, #059669);
-      color: white;
-      box-shadow: 0 0 14px rgba(16,185,129,0.3);
-    }
-    .btn-green:hover:not(:disabled) {
-      transform: translateY(-1px);
-      box-shadow: 0 0 22px rgba(16,185,129,0.45);
-    }
-    .btn-orange {
-      background: linear-gradient(135deg, #f59e0b, #d97706);
-      color: white;
-      box-shadow: 0 0 14px rgba(245,158,11,0.3);
-    }
-    .btn-orange:hover:not(:disabled) {
-      transform: translateY(-1px);
-    }
-    .btn-purple {
-      background: linear-gradient(135deg, #a855f7, #7c3aed);
-      color: white;
-      box-shadow: 0 0 14px rgba(168,85,247,0.3);
-    }
-    .btn-purple:hover:not(:disabled) {
-      transform: translateY(-1px);
-    }
-    .btn-danger {
-      background: rgba(239,68,68,0.12);
-      color: #f87171;
-      border: 1px solid rgba(239,68,68,0.3);
-    }
-    .btn-danger:hover:not(:disabled) {
-      background: rgba(239,68,68,0.2);
-    }
-    .btn-lg {
-      padding: 12px 28px;
-      font-size: 15px;
-      border-radius: 10px;
-    }
-    .btn-sm {
-      padding: 6px 13px;
-      font-size: 12.5px;
-      border-radius: 6px;
-    }
+    /* LAYOUT */
+    .container { max-width:1400px; margin:0 auto; padding:22px 32px 60px; }
 
-    /* ── LAYOUT ── */
-    .container {
-      max-width: 1360px;
-      margin: 0 auto;
-      padding: 24px 32px 60px;
-    }
+    /* STATS BAR */
+    .stats-bar { display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin-bottom:20px; }
+    .stat-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:16px 18px; position:relative; overflow:hidden; }
+    .stat-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; }
+    .stat-card.blue::before   { background:linear-gradient(90deg,#3b82f6,#60a5fa); }
+    .stat-card.green::before  { background:linear-gradient(90deg,#10b981,#34d399); }
+    .stat-card.orange::before { background:linear-gradient(90deg,#f59e0b,#fbbf24); }
+    .stat-card.purple::before { background:linear-gradient(90deg,#a855f7,#c084fc); }
+    .stat-card.red::before    { background:linear-gradient(90deg,#ef4444,#f87171); }
+    .stat-number { font-size:28px; font-weight:800; letter-spacing:-1px; background:linear-gradient(135deg,#e8edf5,#93c5fd); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+    .stat-label  { font-size:11px; color:var(--ink3); margin-top:3px; font-weight:500; text-transform:uppercase; letter-spacing:.5px; }
 
-    /* ── STATS BAR ── */
-    .stats-bar {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 12px;
-      margin-bottom: 24px;
-    }
-    .stat-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 18px 20px;
-      position: relative;
-      overflow: hidden;
-      transition: border-color 0.2s;
-    }
-    .stat-card::before {
-      content: '';
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: 2px;
-    }
-    .stat-card.blue::before { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
-    .stat-card.green::before { background: linear-gradient(90deg, #10b981, #34d399); }
-    .stat-card.orange::before { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
-    .stat-card.purple::before { background: linear-gradient(90deg, #a855f7, #c084fc); }
-    .stat-card.red::before { background: linear-gradient(90deg, #ef4444, #f87171); }
-    .stat-number {
-      font-size: 30px;
-      font-weight: 800;
-      line-height: 1;
-      letter-spacing: -1px;
-      background: linear-gradient(135deg, #e8edf5, #93c5fd);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-    }
-    .stat-label {
-      font-size: 12px;
-      color: var(--ink3);
-      margin-top: 4px;
-      font-weight: 500;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
+    /* TAB NAV */
+    .tab-nav { display:flex; gap:4px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:6px; margin-bottom:16px; }
+    .tab-btn { flex:1; padding:9px 12px; border-radius:8px; font-size:13px; font-weight:600; cursor:pointer; border:none; background:transparent; color:var(--ink3); font-family:inherit; transition:all .18s; text-align:center; }
+    .tab-btn.active { background:linear-gradient(135deg,#3b82f6,#2563eb); color:white; box-shadow:0 0 14px rgba(59,130,246,.35); }
+    .tab-btn:hover:not(.active) { color:var(--ink); background:rgba(255,255,255,.05); }
 
-    /* ── CONTROL PANEL ── */
-    .control-panel {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 24px;
-      margin-bottom: 20px;
-    }
-    .control-grid {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 14px;
-      margin-bottom: 16px;
-    }
-    .field {
-      display: flex;
-      flex-direction: column;
-      gap: 7px;
-    }
-    .field label {
-      font-size: 12px;
-      font-weight: 600;
-      color: var(--ink3);
-      text-transform: uppercase;
-      letter-spacing: 0.6px;
-    }
+    /* TAB PANELS */
+    .tab-panel { display:none; }
+    .tab-panel.active { display:block; }
+
+    /* PANEL */
+    .panel { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:20px; margin-bottom:16px; }
+    .panel-title { font-size:13px; font-weight:700; color:var(--ink2); text-transform:uppercase; letter-spacing:.6px; margin-bottom:14px; display:flex; align-items:center; gap:8px; }
+    .panel-title::after { content:''; flex:1; height:1px; background:var(--border); }
+
+    /* FIELDS */
+    .field-grid { display:grid; gap:12px; }
+    .field-grid-2 { grid-template-columns:1fr 1fr; }
+    .field-grid-3 { grid-template-columns:1fr 1fr 1fr; }
+    .field-grid-4 { grid-template-columns:repeat(4,1fr); }
+    .field { display:flex; flex-direction:column; gap:6px; }
+    .field label { font-size:11.5px; font-weight:600; color:var(--ink3); text-transform:uppercase; letter-spacing:.6px; }
     .field select,
-    .field input {
-      background: var(--bg2);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      color: var(--ink);
-      font: inherit;
-      font-size: 13.5px;
-      height: 40px;
-      padding: 0 12px;
-      outline: none;
-      transition: border-color 0.18s;
-      width: 100%;
-    }
+    .field input[type=text],
+    .field input[type=number] { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--ink); font:inherit; font-size:13px; height:38px; padding:0 11px; outline:none; transition:border-color .18s; width:100%; }
     .field select:focus,
-    .field input:focus { border-color: var(--accent); }
-    .field textarea {
-      background: var(--bg2);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      color: var(--ink);
-      font: inherit;
-      font-size: 13px;
-      padding: 10px 12px;
-      resize: vertical;
-      min-height: 72px;
-      width: 100%;
-      outline: none;
-      transition: border-color 0.18s;
-    }
-    .field textarea:focus { border-color: var(--accent); }
+    .field input:focus { border-color:var(--accent); }
+    .field textarea { background:var(--bg2); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--ink); font:inherit; font-size:13px; padding:9px 11px; resize:vertical; min-height:68px; width:100%; outline:none; transition:border-color .18s; }
+    .field textarea:focus { border-color:var(--accent); }
+    .field-hint { font-size:11px; color:var(--ink3); margin-top:2px; }
 
-    .control-actions {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
+    /* KEYWORD SEARCH */
+    .kw-search-row { display:flex; gap:8px; margin-bottom:12px; }
+    .kw-search-input { flex:1; background:var(--bg2); border:1.5px solid var(--border); border-radius:var(--radius-sm); color:var(--ink); font:inherit; font-size:14px; height:42px; padding:0 14px; outline:none; transition:border-color .18s; }
+    .kw-search-input:focus { border-color:var(--accent); }
+    .kw-add-btn { background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--ink2); padding:0 14px; cursor:pointer; font-size:13px; font-weight:600; font-family:inherit; transition:all .15s; white-space:nowrap; }
+    .kw-add-btn:hover { border-color:var(--accent); color:var(--accent2); }
 
-    .status-pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 6px 14px;
-      border-radius: 999px;
-      font-size: 12.5px;
-      font-weight: 500;
-      background: rgba(255,255,255,0.05);
-      border: 1px solid var(--border);
-      color: var(--ink2);
-      flex: 1;
-      min-width: 200px;
-    }
-    .status-pill.running { border-color: var(--accent); color: var(--accent2); }
-    .status-pill.done { border-color: var(--green); color: #34d399; }
-    .status-pill.error { border-color: var(--red); color: #f87171; }
-    .pulse {
-      width: 7px; height: 7px;
-      border-radius: 50%;
-      background: currentColor;
-      animation: pulse 1.2s ease-in-out infinite;
-      flex-shrink: 0;
-    }
-    @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.4; transform: scale(0.7); }
-    }
+    .kw-tags { display:flex; flex-wrap:wrap; gap:7px; min-height:36px; }
+    .kw-tag { display:inline-flex; align-items:center; gap:6px; padding:5px 12px; border-radius:999px; font-size:12.5px; font-weight:600; cursor:default; }
+    .kw-tag .rm { cursor:pointer; opacity:.6; transition:opacity .15s; font-size:11px; }
+    .kw-tag .rm:hover { opacity:1; }
+    .kw-tag.ai      { background:rgba(59,130,246,.15); color:#93c5fd; border:1px solid rgba(59,130,246,.3); }
+    .kw-tag.startup { background:rgba(16,185,129,.15); color:#6ee7b7; border:1px solid rgba(16,185,129,.3); }
+    .kw-tag.policy  { background:rgba(245,158,11,.15); color:#fcd34d; border:1px solid rgba(245,158,11,.3); }
+    .kw-tag.column  { background:rgba(168,85,247,.15); color:#d8b4fe; border:1px solid rgba(168,85,247,.3); }
 
-    /* ── FILTER BAR ── */
-    .filter-bar {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 20px;
-      flex-wrap: wrap;
+    /* PORTAL TOGGLES */
+    .portal-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(140px,1fr)); gap:8px; }
+    .portal-toggle { position:relative; }
+    .portal-toggle input { position:absolute; opacity:0; width:0; height:0; }
+    .portal-toggle label {
+      display:flex; align-items:center; gap:8px; padding:9px 12px;
+      background:var(--bg2); border:1.5px solid var(--border); border-radius:var(--radius-sm);
+      cursor:pointer; font-size:12.5px; font-weight:600; color:var(--ink3);
+      transition:all .16s; user-select:none;
     }
-    .filter-label { font-size: 13px; color: var(--ink3); font-weight: 500; }
-    .cat-btn {
-      padding: 6px 16px;
-      border-radius: 999px;
-      font-size: 12.5px;
-      font-weight: 600;
-      cursor: pointer;
-      border: 1.5px solid transparent;
-      transition: all 0.16s;
-      font-family: inherit;
-      color: var(--ink2);
-      background: var(--surface);
-    }
-    .cat-btn:hover { color: var(--ink); }
-    .cat-btn.active-all { border-color: var(--accent); color: var(--accent2); background: rgba(59,130,246,0.1); }
-    .cat-btn.active-ai { border-color: var(--cat-ai); color: var(--cat-ai); background: rgba(59,130,246,0.1); }
-    .cat-btn.active-startup { border-color: var(--cat-startup); color: var(--cat-startup); background: rgba(16,185,129,0.1); }
-    .cat-btn.active-policy { border-color: var(--cat-policy); color: var(--cat-policy); background: rgba(245,158,11,0.1); }
-    .cat-btn.active-column { border-color: var(--cat-column); color: var(--cat-column); background: rgba(168,85,247,0.1); }
+    .portal-toggle input:checked + label { border-color:var(--accent); color:var(--ink); background:rgba(59,130,246,.08); }
+    .portal-toggle label:hover { border-color:var(--accent); color:var(--ink2); }
+    .portal-icon { font-size:16px; }
 
-    .sort-select {
-      margin-left: auto;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-sm);
-      color: var(--ink2);
-      font: inherit;
-      font-size: 12.5px;
-      height: 34px;
-      padding: 0 10px;
-      outline: none;
-      cursor: pointer;
+    /* SOURCE CARDS */
+    .source-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(180px,1fr)); gap:8px; }
+    .src-toggle { position:relative; }
+    .src-toggle input { position:absolute; opacity:0; width:0; height:0; }
+    .src-toggle label {
+      display:flex; align-items:center; gap:8px; padding:10px 12px;
+      background:var(--bg2); border:1.5px solid var(--border); border-radius:var(--radius-sm);
+      cursor:pointer; font-size:12px; font-weight:600; color:var(--ink3); transition:all .16s; user-select:none;
     }
-    .sort-select:focus { border-color: var(--accent); }
+    .src-toggle input:checked + label { background:rgba(59,130,246,.1); color:var(--ink); }
+    .src-toggle.ai      input:checked + label { border-color:var(--cat-ai);      background:rgba(59,130,246,.1); color:#93c5fd; }
+    .src-toggle.startup input:checked + label { border-color:var(--cat-startup); background:rgba(16,185,129,.1); color:#6ee7b7; }
+    .src-toggle.policy  input:checked + label { border-color:var(--cat-policy);  background:rgba(245,158,11,.1); color:#fcd34d; }
+    .src-toggle.column  input:checked + label { border-color:var(--cat-column);  background:rgba(168,85,247,.1); color:#d8b4fe; }
+    .src-toggle.reddit  input:checked + label { border-color:#ff4500; background:rgba(255,69,0,.1); color:#ff7043; }
+    .src-toggle.github  input:checked + label { border-color:#6e7681; background:rgba(110,118,129,.1); color:#e6edf3; }
+    .src-toggle label:hover { border-color:var(--ink2); color:var(--ink); }
 
-    /* ── RESULTS HEADER ── */
-    .results-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 14px;
-      gap: 12px;
-      flex-wrap: wrap;
-    }
-    .results-title {
-      font-size: 15px;
-      font-weight: 700;
-      color: var(--ink);
-    }
-    .results-count {
-      font-size: 13px;
-      color: var(--ink3);
-      font-weight: 400;
-    }
-    .export-group {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
+    /* CONTROL BOTTOM */
+    .control-actions { display:flex; align-items:center; gap:10px; margin-top:16px; flex-wrap:wrap; }
+    .status-pill { display:inline-flex; align-items:center; gap:6px; padding:6px 14px; border-radius:999px; font-size:12.5px; font-weight:500; background:rgba(255,255,255,.05); border:1px solid var(--border); color:var(--ink2); flex:1; min-width:200px; }
+    .status-pill.running { border-color:var(--accent); color:var(--accent2); }
+    .status-pill.done    { border-color:var(--green);  color:#34d399; }
+    .status-pill.error   { border-color:var(--red);    color:#f87171; }
+    .pulse { width:7px; height:7px; border-radius:50%; background:currentColor; animation:pulse 1.2s ease-in-out infinite; flex-shrink:0; }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.7)} }
 
-    /* ── ARTICLE CARDS ── */
-    .cards-grid {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
+    /* PROGRESS */
+    .progress-wrap { height:3px; background:var(--surface2); border-radius:2px; overflow:hidden; display:none; }
+    .progress-wrap.visible { display:block; }
+    .progress-bar { height:100%; background:linear-gradient(90deg,#3b82f6,#a855f7); border-radius:2px; transition:width .3s ease; width:0%; }
 
-    .article-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 20px 22px;
-      display: grid;
-      grid-template-columns: 44px 1fr auto;
-      gap: 16px;
-      align-items: start;
-      transition: border-color 0.18s, transform 0.18s, box-shadow 0.18s;
-      position: relative;
-      overflow: hidden;
-    }
-    .article-card::before {
-      content: '';
-      position: absolute;
-      left: 0; top: 0; bottom: 0;
-      width: 3px;
-      border-radius: 3px 0 0 3px;
-    }
-    .article-card.cat-ai::before { background: var(--cat-ai); }
-    .article-card.cat-startup::before { background: var(--cat-startup); }
-    .article-card.cat-policy::before { background: var(--cat-policy); }
-    .article-card.cat-column::before { background: var(--cat-column); }
-    .article-card:hover {
-      border-color: var(--accent);
-      transform: translateY(-2px);
-      box-shadow: var(--shadow);
-    }
+    /* FILTER BAR */
+    .filter-bar { display:flex; align-items:center; gap:8px; margin-bottom:16px; flex-wrap:wrap; }
+    .filter-label { font-size:13px; color:var(--ink3); font-weight:500; }
+    .cat-btn { padding:5px 14px; border-radius:999px; font-size:12.5px; font-weight:600; cursor:pointer; border:1.5px solid transparent; transition:all .16s; font-family:inherit; color:var(--ink2); background:var(--surface); }
+    .cat-btn:hover { color:var(--ink); }
+    .cat-btn.active-all     { border-color:var(--accent);      color:var(--accent2);     background:rgba(59,130,246,.1); }
+    .cat-btn.active-ai      { border-color:var(--cat-ai);      color:var(--cat-ai);      background:rgba(59,130,246,.1); }
+    .cat-btn.active-startup { border-color:var(--cat-startup); color:var(--cat-startup); background:rgba(16,185,129,.1); }
+    .cat-btn.active-policy  { border-color:var(--cat-policy);  color:var(--cat-policy);  background:rgba(245,158,11,.1); }
+    .cat-btn.active-column  { border-color:var(--cat-column);  color:var(--cat-column);  background:rgba(168,85,247,.1); }
+    .sort-select { margin-left:auto; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--ink2); font:inherit; font-size:12.5px; height:32px; padding:0 10px; outline:none; cursor:pointer; }
 
-    .card-num {
-      width: 44px;
-      height: 44px;
-      border-radius: 10px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 18px;
-      font-weight: 900;
-      flex-shrink: 0;
-      color: white;
-    }
-    .cat-ai .card-num { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
-    .cat-startup .card-num { background: linear-gradient(135deg, #10b981, #047857); }
-    .cat-policy .card-num { background: linear-gradient(135deg, #f59e0b, #b45309); }
-    .cat-column .card-num { background: linear-gradient(135deg, #a855f7, #6d28d9); }
+    /* RESULTS */
+    .results-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; gap:10px; flex-wrap:wrap; }
+    .results-title  { font-size:15px; font-weight:700; }
+    .results-count  { font-size:13px; color:var(--ink3); font-weight:400; }
+    .export-group   { display:flex; gap:7px; flex-wrap:wrap; }
 
-    .card-body { min-width: 0; }
+    /* CARDS */
+    .cards-grid { display:flex; flex-direction:column; gap:10px; }
+    .article-card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:18px 20px; display:grid; grid-template-columns:42px 1fr auto; gap:14px; align-items:start; transition:border-color .18s,transform .18s,box-shadow .18s; position:relative; overflow:hidden; }
+    .article-card::before { content:''; position:absolute; left:0; top:0; bottom:0; width:3px; border-radius:3px 0 0 3px; }
+    .article-card.cat-ai::before      { background:var(--cat-ai); }
+    .article-card.cat-startup::before { background:var(--cat-startup); }
+    .article-card.cat-policy::before  { background:var(--cat-policy); }
+    .article-card.cat-column::before  { background:var(--cat-column); }
+    .article-card:hover { border-color:var(--accent); transform:translateY(-2px); box-shadow:var(--shadow); }
 
-    .card-meta {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 6px;
-      flex-wrap: wrap;
-    }
-    .cat-tag {
-      padding: 2px 10px;
-      border-radius: 999px;
-      font-size: 11px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    .cat-tag.ai { background: rgba(59,130,246,0.15); color: var(--cat-ai); }
-    .cat-tag.startup { background: rgba(16,185,129,0.15); color: var(--cat-startup); }
-    .cat-tag.policy { background: rgba(245,158,11,0.15); color: var(--cat-policy); }
-    .cat-tag.column { background: rgba(168,85,247,0.15); color: var(--cat-column); }
-    .time-tag { font-size: 11px; color: var(--ink3); }
+    .card-num { width:42px; height:42px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:17px; font-weight:900; flex-shrink:0; color:white; }
+    .cat-ai      .card-num { background:linear-gradient(135deg,#3b82f6,#1d4ed8); }
+    .cat-startup .card-num { background:linear-gradient(135deg,#10b981,#047857); }
+    .cat-policy  .card-num { background:linear-gradient(135deg,#f59e0b,#b45309); }
+    .cat-column  .card-num { background:linear-gradient(135deg,#a855f7,#6d28d9); }
 
-    .card-title {
-      font-size: 16px;
-      font-weight: 700;
-      color: var(--ink);
-      line-height: 1.4;
-      margin-bottom: 8px;
-      letter-spacing: -0.2px;
-    }
-    .card-summary {
-      font-size: 13.5px;
-      color: var(--ink2);
-      line-height: 1.6;
-      margin-bottom: 10px;
-    }
-    .card-url {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-      font-size: 12.5px;
-      color: var(--accent2);
-      text-decoration: none;
-      word-break: break-all;
-    }
-    .card-url:hover { text-decoration: underline; }
+    .card-meta   { display:flex; align-items:center; gap:7px; margin-bottom:5px; flex-wrap:wrap; }
+    .cat-tag     { padding:2px 9px; border-radius:999px; font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.4px; }
+    .cat-tag.ai      { background:rgba(59,130,246,.15); color:var(--cat-ai); }
+    .cat-tag.startup { background:rgba(16,185,129,.15); color:var(--cat-startup); }
+    .cat-tag.policy  { background:rgba(245,158,11,.15); color:var(--cat-policy); }
+    .cat-tag.column  { background:rgba(168,85,247,.15); color:var(--cat-column); }
+    .src-tag { font-size:10.5px; color:var(--ink3); }
+    .platform-badge { font-size:10px; padding:1px 7px; border-radius:4px; font-weight:700; }
+    .pb-naver   { background:rgba(3,199,90,.15);  color:#03c75a; }
+    .pb-google  { background:rgba(66,133,244,.15); color:#4285f4; }
+    .pb-reddit  { background:rgba(255,69,0,.15);   color:#ff4500; }
+    .pb-github  { background:rgba(110,118,129,.15);color:#e6edf3; }
+    .pb-daum    { background:rgba(0,130,255,.15);  color:#0082ff; }
+    .pb-bing    { background:rgba(0,120,212,.15);  color:#0078d4; }
+    .pb-openai  { background:rgba(16,185,129,.15); color:#34d399; }
+    .pb-blog    { background:rgba(168,85,247,.15); color:#d8b4fe; }
 
-    .card-scores {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      gap: 8px;
-      flex-shrink: 0;
-    }
-    .final-score {
-      font-size: 28px;
-      font-weight: 900;
-      letter-spacing: -1px;
-      line-height: 1;
-    }
-    .score-90 { color: #34d399; }
-    .score-80 { color: #60a5fa; }
-    .score-70 { color: #fbbf24; }
-    .score-low { color: var(--ink3); }
-    .score-label { font-size: 10px; color: var(--ink3); text-align: right; font-weight: 500; }
-    .score-badge {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-      padding: 3px 9px;
-      border-radius: 6px;
-      font-size: 11px;
-      font-weight: 600;
-    }
-    .score-badge.excellent { background: rgba(52,211,153,0.15); color: #34d399; }
-    .score-badge.priority { background: rgba(96,165,250,0.15); color: #60a5fa; }
-    .score-badge.review { background: rgba(251,191,36,0.15); color: #fbbf24; }
-    .score-badge.skip { background: rgba(100,116,139,0.15); color: var(--ink3); }
+    .card-title   { font-size:15.5px; font-weight:700; color:var(--ink); line-height:1.4; margin-bottom:7px; letter-spacing:-.2px; }
+    .card-summary { font-size:13px; color:var(--ink2); line-height:1.6; margin-bottom:9px; }
+    .card-url     { display:inline-flex; align-items:center; gap:5px; font-size:12px; color:var(--accent2); text-decoration:none; word-break:break-all; }
+    .card-url:hover { text-decoration:underline; }
 
-    /* ── EMPTY STATE ── */
-    .empty-state {
-      text-align: center;
-      padding: 80px 40px;
-      color: var(--ink3);
-    }
-    .empty-icon {
-      font-size: 56px;
-      margin-bottom: 16px;
-      display: block;
-    }
-    .empty-state h3 { font-size: 18px; color: var(--ink2); margin-bottom: 8px; }
-    .empty-state p { font-size: 14px; }
+    .card-scores { display:flex; flex-direction:column; align-items:flex-end; gap:7px; flex-shrink:0; }
+    .final-score { font-size:26px; font-weight:900; letter-spacing:-1px; line-height:1; }
+    .score-90  { color:#34d399; }
+    .score-80  { color:#60a5fa; }
+    .score-70  { color:#fbbf24; }
+    .score-low { color:var(--ink3); }
+    .score-label { font-size:10px; color:var(--ink3); text-align:right; font-weight:500; }
+    .score-badge { display:flex; align-items:center; gap:3px; padding:3px 8px; border-radius:6px; font-size:11px; font-weight:600; }
+    .score-badge.excellent { background:rgba(52,211,153,.15); color:#34d399; }
+    .score-badge.priority  { background:rgba(96,165,250,.15);  color:#60a5fa; }
+    .score-badge.review    { background:rgba(251,191,36,.15);  color:#fbbf24; }
+    .score-badge.skip      { background:rgba(100,116,139,.15); color:var(--ink3); }
 
-    /* ── PROGRESS BAR ── */
-    .progress-wrap {
-      height: 3px;
-      background: var(--surface2);
-      border-radius: 2px;
-      overflow: hidden;
-      margin-top: 14px;
-      display: none;
-    }
-    .progress-wrap.visible { display: block; }
-    .progress-bar {
-      height: 100%;
-      background: linear-gradient(90deg, #3b82f6, #a855f7);
-      border-radius: 2px;
-      transition: width 0.3s ease;
-      width: 0%;
-    }
+    /* EMPTY */
+    .empty-state { text-align:center; padding:70px 40px; color:var(--ink3); }
+    .empty-icon  { font-size:52px; margin-bottom:14px; display:block; }
+    .empty-state h3 { font-size:17px; color:var(--ink2); margin-bottom:7px; }
+    .empty-state p  { font-size:13.5px; }
 
-    /* ── NOTIFICATION TOAST ── */
-    .toast-container {
-      position: fixed;
-      bottom: 24px;
-      right: 24px;
-      z-index: 9999;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-      pointer-events: none;
-    }
-    .toast {
-      background: var(--surface2);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 14px 18px;
-      font-size: 13.5px;
-      color: var(--ink);
-      box-shadow: var(--shadow);
-      animation: slideIn 0.25s ease;
-      pointer-events: all;
-      max-width: 320px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .toast.success { border-color: var(--green); }
-    .toast.error { border-color: var(--red); }
-    @keyframes slideIn {
-      from { transform: translateX(100%); opacity: 0; }
-      to { transform: translateX(0); opacity: 1; }
-    }
-    @keyframes slideOut {
-      from { transform: translateX(0); opacity: 1; }
-      to { transform: translateX(100%); opacity: 0; }
-    }
-    .toast.removing { animation: slideOut 0.25s ease forwards; }
+    /* DIVIDER */
+    .div-row { display:flex; align-items:center; gap:10px; margin:12px 0; }
+    .div-line { flex:1; height:1px; background:var(--border); }
+    .div-text { font-size:11px; color:var(--ink3); font-weight:600; text-transform:uppercase; letter-spacing:.7px; }
 
-    /* ── DIVIDER ── */
-    .section-divider {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      margin: 8px 0 16px;
-    }
-    .divider-line { flex: 1; height: 1px; background: var(--border); }
-    .divider-text { font-size: 11px; color: var(--ink3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; }
+    /* TOAST */
+    .toast-container { position:fixed; bottom:22px; right:22px; z-index:9999; display:flex; flex-direction:column; gap:9px; pointer-events:none; }
+    .toast { background:var(--surface2); border:1px solid var(--border); border-radius:var(--radius); padding:12px 16px; font-size:13px; color:var(--ink); box-shadow:var(--shadow); animation:slideIn .25s ease; pointer-events:all; max-width:310px; display:flex; align-items:center; gap:9px; }
+    .toast.success { border-color:var(--green); }
+    .toast.error   { border-color:var(--red); }
+    @keyframes slideIn  { from{transform:translateX(110%);opacity:0} to{transform:translateX(0);opacity:1} }
+    @keyframes slideOut { from{transform:translateX(0);opacity:1}   to{transform:translateX(110%);opacity:0} }
+    .toast.removing { animation:slideOut .25s ease forwards; }
 
-    /* ── KEYWORD CHIPS ── */
-    .keyword-chips {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-top: 10px;
-    }
-    .chip {
-      padding: 4px 12px;
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: 500;
-      background: rgba(59,130,246,0.1);
-      color: var(--accent2);
-      border: 1px solid rgba(59,130,246,0.2);
-      cursor: pointer;
-      transition: all 0.15s;
-    }
-    .chip:hover {
-      background: rgba(59,130,246,0.2);
-      transform: scale(1.03);
-    }
+    /* SELECT ALL ROW */
+    .select-row { display:flex; gap:8px; margin-bottom:10px; align-items:center; }
+    .select-all-btn { font-size:11.5px; color:var(--accent2); cursor:pointer; border:none; background:none; font-family:inherit; font-weight:600; padding:0; }
+    .select-all-btn:hover { text-decoration:underline; }
 
-    @media (max-width: 1100px) { .stats-bar { grid-template-columns: repeat(3, 1fr); } }
-    @media (max-width: 860px) {
-      .control-grid { grid-template-columns: 1fr 1fr; }
-      .stats-bar { grid-template-columns: repeat(2, 1fr); }
-      .article-card { grid-template-columns: 36px 1fr; }
-      .card-scores { flex-direction: row; align-items: center; grid-column: 1 / -1; }
-      .container { padding: 16px; }
+    @media(max-width:1100px){ .stats-bar{grid-template-columns:repeat(3,1fr);} }
+    @media(max-width:860px){
+      .field-grid-4,.field-grid-3{grid-template-columns:1fr 1fr;}
+      .stats-bar{grid-template-columns:repeat(2,1fr);}
+      .article-card{grid-template-columns:36px 1fr;}
+      .card-scores{flex-direction:row;align-items:center;grid-column:1/-1;}
+      .container{padding:14px;}
     }
-    @media (max-width: 560px) {
-      .control-grid { grid-template-columns: 1fr; }
-      .hero { padding: 18px 16px; }
-      .hero-inner { flex-direction: column; }
+    @media(max-width:560px){
+      .hero{padding:16px;}
+      .hero-inner{flex-direction:column;}
+      .field-grid-4,.field-grid-3,.field-grid-2{grid-template-columns:1fr;}
     }
   </style>
 </head>
@@ -679,13 +292,13 @@
       <div class="brand-logo">CN</div>
       <div class="brand-text">
         <h1>COA NEWS AI Content Engine</h1>
-        <p>AI 비즈니스 · 창업 · 정책·지원사업 소재 자동 수집 · 점수화 · 엑셀 정리</p>
+        <p>네이버·구글·Reddit·GitHub·공식블로그 소재 자동 수집 · 점수화 · 엑셀 정리</p>
       </div>
     </div>
     <div class="hero-actions">
-      <button class="btn btn-ghost btn-sm" id="btnExportXlsx">📊 엑셀 다운로드</button>
-      <button class="btn btn-ghost btn-sm" id="btnExportCsv">📋 CSV 다운로드</button>
-      <button class="btn btn-ghost btn-sm" id="btnExportMd">📝 소재목록 복사</button>
+      <button class="btn btn-ghost btn-sm" id="hExportXlsx">📊 엑셀</button>
+      <button class="btn btn-ghost btn-sm" id="hExportCsv">📋 CSV</button>
+      <button class="btn btn-ghost btn-sm" id="hExportMd">📝 소재목록</button>
     </div>
   </div>
 </header>
@@ -694,55 +307,127 @@
 
   <!-- Stats -->
   <div class="stats-bar">
-    <div class="stat-card blue">
-      <div class="stat-number" id="statTotal">0</div>
-      <div class="stat-label">수집 건수</div>
-    </div>
-    <div class="stat-card green">
-      <div class="stat-number" id="statHigh">0</div>
-      <div class="stat-label">즉시 기사 (90+)</div>
-    </div>
-    <div class="stat-card orange">
-      <div class="stat-number" id="statMid">0</div>
-      <div class="stat-label">우선 검토 (80~89)</div>
-    </div>
-    <div class="stat-card red">
-      <div class="stat-number" id="statFail">0</div>
-      <div class="stat-label">수집 실패</div>
-    </div>
-    <div class="stat-card purple">
-      <div class="stat-number" id="statElapsed">0s</div>
-      <div class="stat-label">경과 시간</div>
+    <div class="stat-card blue">   <div class="stat-number" id="stTotal">0</div><div class="stat-label">수집 건수</div></div>
+    <div class="stat-card green">  <div class="stat-number" id="stHigh">0</div> <div class="stat-label">즉시 기사 (90+)</div></div>
+    <div class="stat-card orange"> <div class="stat-number" id="stMid">0</div>  <div class="stat-label">우선 검토 (80~89)</div></div>
+    <div class="stat-card red">    <div class="stat-number" id="stFail">0</div> <div class="stat-label">수집 실패</div></div>
+    <div class="stat-card purple"> <div class="stat-number" id="stTime">0s</div><div class="stat-label">경과 시간</div></div>
+  </div>
+
+  <!-- TAB NAV -->
+  <div class="tab-nav">
+    <button class="tab-btn active" id="tabKeyword" onclick="switchTab('keyword')">🔍 키워드 검색</button>
+    <button class="tab-btn"        id="tabSource"  onclick="switchTab('source')">📡 소스 직접 선택</button>
+    <button class="tab-btn"        id="tabCustom"  onclick="switchTab('custom')">🔗 커스텀 URL</button>
+  </div>
+
+  <!-- ━━━ TAB: 키워드 검색 ━━━ -->
+  <div class="tab-panel active" id="panelKeyword">
+    <div class="panel">
+      <div class="panel-title">검색 키워드 입력</div>
+      <div class="kw-search-row">
+        <input class="kw-search-input" id="kwInput" type="text" placeholder="예: ChatGPT 활용법, 소상공인 지원금, 창업지원..." />
+        <select id="kwCat" style="background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius-sm);color:var(--ink);font:inherit;font-size:13px;height:42px;padding:0 10px;outline:none;">
+          <option value="ai">🤖 AI 비즈니스</option>
+          <option value="startup">🚀 창업·부업</option>
+          <option value="policy">🏛️ 정책·지원</option>
+          <option value="column">✍️ 현장 칼럼</option>
+        </select>
+        <button class="kw-add-btn" id="kwAddBtn">+ 추가</button>
+      </div>
+      <div class="kw-tags" id="kwTags"></div>
+      <div class="field-hint" style="margin-top:8px;">키워드를 추가하면 선택된 포털/플랫폼에서 자동으로 검색합니다</div>
+
+      <div class="div-row"><div class="div-line"></div><div class="div-text">검색 플랫폼 선택</div><div class="div-line"></div></div>
+      <div class="portal-grid" id="portalGrid">
+        <div class="portal-toggle"><input type="checkbox" id="pNaver"  checked /><label for="pNaver">  <span class="portal-icon">🟢</span>네이버 뉴스</label></div>
+        <div class="portal-toggle"><input type="checkbox" id="pNaverB" checked /><label for="pNaverB"> <span class="portal-icon">🟢</span>네이버 블로그</label></div>
+        <div class="portal-toggle"><input type="checkbox" id="pGoogle" checked /><label for="pGoogle"> <span class="portal-icon">🔵</span>구글 뉴스</label></div>
+        <div class="portal-toggle"><input type="checkbox" id="pDaum"         /><label for="pDaum">   <span class="portal-icon">🔷</span>다음 뉴스</label></div>
+        <div class="portal-toggle"><input type="checkbox" id="pBing"         /><label for="pBing">   <span class="portal-icon">🔵</span>Bing 뉴스</label></div>
+        <div class="portal-toggle"><input type="checkbox" id="pReddit" checked /><label for="pReddit"> <span class="portal-icon">🔴</span>Reddit</label></div>
+        <div class="portal-toggle"><input type="checkbox" id="pGithub" checked /><label for="pGithub"> <span class="portal-icon">⚫</span>GitHub</label></div>
+        <div class="portal-toggle"><input type="checkbox" id="pYoutube"       /><label for="pYoutube"><span class="portal-icon">🔴</span>YouTube</label></div>
+      </div>
+
+      <!-- 빠른 키워드 추천 -->
+      <div class="div-row"><div class="div-line"></div><div class="div-text">추천 키워드</div><div class="div-line"></div></div>
+      <div id="quickKwGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:6px;"></div>
     </div>
   </div>
 
-  <!-- Control Panel -->
-  <div class="control-panel">
-    <div class="control-grid">
-      <div class="field">
-        <label>카테고리</label>
-        <select id="selCategory">
-          <option value="all">전체 카테고리</option>
-          <option value="ai">🤖 AI 비즈니스</option>
-          <option value="startup">🚀 창업·부업</option>
-          <option value="policy">🏛️ 정책·지원사업</option>
-          <option value="column">✍️ 현장 칼럼</option>
-        </select>
+  <!-- ━━━ TAB: 소스 직접 선택 ━━━ -->
+  <div class="tab-panel" id="panelSource">
+    <div class="panel">
+      <div class="panel-title">🤖 AI 비즈니스 소스</div>
+      <div class="select-row">
+        <button class="select-all-btn" onclick="checkAll('ai-src',true)">전체 선택</button>
+        <span style="color:var(--ink3);font-size:11px;">|</span>
+        <button class="select-all-btn" onclick="checkAll('ai-src',false)">전체 해제</button>
       </div>
-      <div class="field">
-        <label>소스 범위</label>
-        <select id="selSource">
-          <option value="all">기본 소스 전체</option>
-          <option value="ai_official">AI 공식 블로그</option>
-          <option value="ai_community">AI 커뮤니티/SNS</option>
-          <option value="startup_kr">창업 정보 (한국)</option>
-          <option value="policy_kr">정책·지원사업</option>
-          <option value="custom">커스텀 URL 전용</option>
-        </select>
+      <div class="source-grid" id="srcAi"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">🔴 Reddit 커뮤니티</div>
+      <div class="select-row">
+        <button class="select-all-btn" onclick="checkAll('reddit-src',true)">전체 선택</button>
+        <span style="color:var(--ink3);font-size:11px;">|</span>
+        <button class="select-all-btn" onclick="checkAll('reddit-src',false)">전체 해제</button>
       </div>
+      <div class="source-grid" id="srcReddit"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">⚫ GitHub</div>
+      <div class="select-row">
+        <button class="select-all-btn" onclick="checkAll('github-src',true)">전체 선택</button>
+        <span style="color:var(--ink3);font-size:11px;">|</span>
+        <button class="select-all-btn" onclick="checkAll('github-src',false)">전체 해제</button>
+      </div>
+      <div class="source-grid" id="srcGithub"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">🚀 창업·부업 소스</div>
+      <div class="source-grid" id="srcStartup"></div>
+    </div>
+    <div class="panel">
+      <div class="panel-title">🏛️ 정책·지원사업 소스</div>
+      <div class="source-grid" id="srcPolicy"></div>
+    </div>
+  </div>
+
+  <!-- ━━━ TAB: 커스텀 URL ━━━ -->
+  <div class="tab-panel" id="panelCustom">
+    <div class="panel">
+      <div class="panel-title">커스텀 URL 직접 입력</div>
+      <div class="field" style="margin-bottom:12px;">
+        <label>수집할 URL (줄마다 하나씩)</label>
+        <textarea id="customUrls" rows="6" placeholder="https://www.reddit.com/r/ClaudeAI/comments/...&#10;https://github.com/trending&#10;https://openai.com/news/&#10;https://search.naver.com/search.naver?where=news&query=AI+에이전트&#10;https://news.google.com/search?q=ChatGPT&hl=ko"></textarea>
+        <div class="field-hint">네이버 검색결과 URL, 구글 뉴스 URL, Reddit 게시글, GitHub 리포지토리 등 모든 URL 지원</div>
+      </div>
+      <div class="field-grid field-grid-2">
+        <div class="field">
+          <label>카테고리 지정</label>
+          <select id="customCat">
+            <option value="ai">🤖 AI 비즈니스</option>
+            <option value="startup">🚀 창업·부업</option>
+            <option value="policy">🏛️ 정책·지원사업</option>
+            <option value="column">✍️ 현장 칼럼</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>최대 수집 (URL당)</label>
+          <input type="number" id="customMaxPages" min="1" max="20" value="5" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Common Options -->
+  <div class="panel">
+    <div class="field-grid field-grid-4">
       <div class="field">
-        <label>페이지당 최대 수집</label>
-        <input id="inpMaxPages" type="number" min="1" max="30" value="8" />
+        <label>최대 수집 (소스당)</label>
+        <input type="number" id="inpMaxPages" min="1" max="30" value="6" />
       </div>
       <div class="field">
         <label>점수 필터 (최소)</label>
@@ -753,34 +438,25 @@
           <option value="90">90점 이상 (즉시 기사)</option>
         </select>
       </div>
-    </div>
-
-    <div class="field" style="margin-bottom:14px;">
-      <label>커스텀 URL (줄별 입력)</label>
-      <textarea id="inpCustomUrls" placeholder="https://openai.com/news&#10;https://www.yna.co.kr/view/AKR...&#10;https://www.mss.go.kr/..."></textarea>
-    </div>
-
-    <div class="section-divider">
-      <div class="divider-line"></div>
-      <div class="divider-text">추천 키워드</div>
-      <div class="divider-line"></div>
-    </div>
-    <div class="keyword-chips" id="keywordChips"></div>
-
-    <div style="margin-top: 16px;">
-      <div class="progress-wrap" id="progressWrap">
-        <div class="progress-bar" id="progressBar"></div>
+      <div class="field">
+        <label>수집 딜레이 (ms)</label>
+        <input type="number" id="inpDelay" min="0" max="5000" value="800" />
+      </div>
+      <div class="field">
+        <label>타임아웃 (초)</label>
+        <input type="number" id="inpTimeout" min="5" max="60" value="20" />
       </div>
     </div>
-
-    <div class="control-actions" style="margin-top: 16px;">
-      <button class="btn btn-primary btn-lg" id="btnCollect">
-        ⚡ 소재 수집 시작
-      </button>
-      <button class="btn btn-danger btn-sm" id="btnClear">🗑️ 초기화</button>
+    <div class="progress-wrap" id="progressWrap" style="margin-top:14px;">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+    <div class="control-actions">
+      <button class="btn btn-primary btn-lg" id="btnCollect">⚡ 소재 수집 시작</button>
+      <button class="btn btn-danger btn-sm"  id="btnStop"   style="display:none;">⏹ 중지</button>
+      <button class="btn btn-danger btn-sm"  id="btnClear">🗑️ 초기화</button>
       <div class="status-pill" id="statusPill">
         <span class="pulse" style="display:none;" id="pulseEl"></span>
-        <span id="statusText">수집 준비 완료. 소재 수집 시작을 누르세요.</span>
+        <span id="statusText">수집 준비 완료.</span>
       </div>
     </div>
   </div>
@@ -788,11 +464,11 @@
   <!-- Filter Bar -->
   <div class="filter-bar">
     <span class="filter-label">필터:</span>
-    <button class="cat-btn active-all" data-cat="all" id="fAll">전체</button>
-    <button class="cat-btn" data-cat="ai" id="fAi">🤖 AI 비즈니스</button>
-    <button class="cat-btn" data-cat="startup" id="fStartup">🚀 창업·부업</button>
-    <button class="cat-btn" data-cat="policy" id="fPolicy">🏛️ 정책·지원사업</button>
-    <button class="cat-btn" data-cat="column" id="fColumn">✍️ 현장 칼럼</button>
+    <button class="cat-btn active-all" data-cat="all">전체</button>
+    <button class="cat-btn" data-cat="ai">🤖 AI 비즈니스</button>
+    <button class="cat-btn" data-cat="startup">🚀 창업·부업</button>
+    <button class="cat-btn" data-cat="policy">🏛️ 정책·지원사업</button>
+    <button class="cat-btn" data-cat="column">✍️ 현장 칼럼</button>
     <select class="sort-select" id="selSort">
       <option value="score">점수 높은 순</option>
       <option value="time">최신 순</option>
@@ -807,9 +483,9 @@
       <span class="results-count" id="resultCount">— 건</span>
     </div>
     <div class="export-group">
-      <button class="btn btn-green btn-sm" id="btnExportXlsx2">📊 엑셀 저장</button>
-      <button class="btn btn-orange btn-sm" id="btnExportCsv2">📋 CSV 저장</button>
-      <button class="btn btn-purple btn-sm" id="btnExportMd2">📝 소재목록 Markdown</button>
+      <button class="btn btn-green  btn-sm" id="bExportXlsx">📊 엑셀 저장</button>
+      <button class="btn btn-orange btn-sm" id="bExportCsv">📋 CSV 저장</button>
+      <button class="btn btn-purple btn-sm" id="bExportMd">📝 소재목록 Markdown</button>
     </div>
   </div>
 
@@ -817,7 +493,7 @@
     <div class="empty-state">
       <span class="empty-icon">📡</span>
       <h3>아직 수집된 소재가 없습니다</h3>
-      <p>카테고리와 소스를 선택한 뒤 "소재 수집 시작" 버튼을 누르세요.</p>
+      <p>키워드를 입력하거나 소스를 선택하고 "소재 수집 시작"을 누르세요.</p>
     </div>
   </div>
 </div>
@@ -826,327 +502,397 @@
 
 <script>
 // ══════════════════════════════════════════════════════
-//  COA NEWS AI Content Engine — Core Logic
+//  COA NEWS AI Content Engine v2 — 멀티소스 수집
 // ══════════════════════════════════════════════════════
 
-const KEYWORDS = {
-  ai: ['ChatGPT 활용법', 'Claude 업무', 'Gemini 마케팅', 'AI Agent', 'AI 직원', 'AI 자동화',
-       'AI SaaS', 'AI 챗봇', 'AI 생산성', 'Copilot 활용', 'Perplexity 검색', 'AI Workflow',
-       '생성형 AI 비즈니스', 'AI 마케팅 자동화', 'Grok 활용법'],
-  startup: ['무자본 창업', 'SaaS 창업', '1인기업', '직장인 부업', '디지털노마드', '전자책 판매',
-            '스마트스토어 창업', '프리랜서 수익', '온라인 수익화', '소자본 창업', '퇴직자 부업'],
-  policy: ['소상공인 지원금', '창업지원금', '정책자금', '고용지원금', '청년창업 지원',
-           '중소기업 지원', '디지털전환 지원', '수출지원', '지역화폐', '재창업 지원'],
-  column: ['창업 실패 사례', 'AI 활용 경험', '매출 증가 전략', '고객 확보 방법', '업무 자동화 경험',
-           '마케팅 전략 노하우', '성공 창업 스토리']
-};
+// ── 소스 정의 ─────────────────────────────────────────
+const AI_SOURCES = [
+  { id:'openai',     name:'OpenAI Blog',        url:'https://openai.com/news/',                       cat:'ai',      platform:'openai' },
+  { id:'anthropic',  name:'Anthropic News',      url:'https://www.anthropic.com/news',                 cat:'ai',      platform:'blog' },
+  { id:'googleai',   name:'Google AI Blog',      url:'https://blog.google/technology/ai/',             cat:'ai',      platform:'blog' },
+  { id:'msai',       name:'Microsoft AI Blog',   url:'https://blogs.microsoft.com/ai/',                cat:'ai',      platform:'blog' },
+  { id:'awsml',      name:'AWS ML Blog',         url:'https://aws.amazon.com/ko/blogs/machine-learning/', cat:'ai',   platform:'blog' },
+  { id:'huggingface',name:'HuggingFace Blog',    url:'https://huggingface.co/blog',                   cat:'ai',      platform:'blog' },
+  { id:'metaai',     name:'Meta AI Blog',        url:'https://ai.meta.com/blog/',                     cat:'ai',      platform:'blog' },
+  { id:'mistral',    name:'Mistral AI Blog',     url:'https://mistral.ai/news/',                      cat:'ai',      platform:'blog' },
+];
 
-const SOURCES = {
-  ai_official: [
-    { name: 'OpenAI Blog',      url: 'https://openai.com/news/',          cat: 'ai' },
-    { name: 'Anthropic News',   url: 'https://www.anthropic.com/news',    cat: 'ai' },
-    { name: 'Google AI Blog',   url: 'https://blog.google/technology/ai/','cat': 'ai' },
-    { name: 'Microsoft AI Blog',url: 'https://blogs.microsoft.com/ai/',   cat: 'ai' },
-    { name: 'AWS ML Blog',      url: 'https://aws.amazon.com/ko/blogs/machine-learning/', cat: 'ai' },
-  ],
-  ai_community: [
-    { name: 'HackerNews AI',    url: 'https://hn.algolia.com/?q=AI+agent&tags=story', cat: 'ai' },
-    { name: 'Reddit ClaudeAI',  url: 'https://www.reddit.com/r/ClaudeAI/hot/', cat: 'ai' },
-    { name: 'Reddit ChatGPT',   url: 'https://www.reddit.com/r/ChatGPT/hot/',  cat: 'ai' },
-    { name: 'GitHub AI Trending', url: 'https://github.com/trending?since=daily&spoken_language_code=', cat: 'ai' },
-  ],
-  startup_kr: [
-    { name: '창업진흥원',       url: 'https://www.kised.or.kr/board.es?mid=a10305000000', cat: 'startup' },
-    { name: 'Bizinfo 창업',     url: 'https://www.bizinfo.go.kr/web/lay1/bbs/S1T122C128/AS/74/list.do', cat: 'startup' },
-    { name: '소상공인진흥공단', url: 'https://www.semas.or.kr/web/main/index.kmdc', cat: 'startup' },
-  ],
-  policy_kr: [
-    { name: '정책브리핑',       url: 'https://www.korea.kr/briefing/pressReleaseList.do', cat: 'policy' },
-    { name: '중소벤처기업부',   url: 'https://www.mss.go.kr/site/smba/main.do', cat: 'policy' },
-    { name: '고용노동부',       url: 'https://www.moel.go.kr/news/enews/list.do', cat: 'policy' },
-    { name: 'Work24',           url: 'https://www.work24.go.kr', cat: 'policy' },
-  ]
+const REDDIT_SOURCES = [
+  { id:'r_claude',   name:'r/ClaudeAI',          url:'https://www.reddit.com/r/ClaudeAI/hot/',        cat:'ai',      platform:'reddit' },
+  { id:'r_chatgpt',  name:'r/ChatGPT',            url:'https://www.reddit.com/r/ChatGPT/hot/',         cat:'ai',      platform:'reddit' },
+  { id:'r_aitools',  name:'r/AITools',            url:'https://www.reddit.com/r/AItools/hot/',         cat:'ai',      platform:'reddit' },
+  { id:'r_llm',      name:'r/LocalLLaMA',         url:'https://www.reddit.com/r/LocalLLaMA/hot/',      cat:'ai',      platform:'reddit' },
+  { id:'r_ml',       name:'r/MachineLearning',    url:'https://www.reddit.com/r/MachineLearning/hot/', cat:'ai',      platform:'reddit' },
+  { id:'r_artificial',name:'r/artificial',        url:'https://www.reddit.com/r/artificial/hot/',      cat:'ai',      platform:'reddit' },
+  { id:'r_startup',  name:'r/startups',           url:'https://www.reddit.com/r/startups/hot/',        cat:'startup', platform:'reddit' },
+  { id:'r_sidehustle',name:'r/sidehustle',        url:'https://www.reddit.com/r/sidehustle/hot/',      cat:'startup', platform:'reddit' },
+  { id:'r_entrepreneur',name:'r/Entrepreneur',   url:'https://www.reddit.com/r/Entrepreneur/hot/',    cat:'startup', platform:'reddit' },
+  { id:'r_saas',     name:'r/SaaS',               url:'https://www.reddit.com/r/SaaS/hot/',            cat:'startup', platform:'reddit' },
+];
+
+const GITHUB_SOURCES = [
+  { id:'gh_daily',   name:'GitHub Trending (일간)',  url:'https://github.com/trending?since=daily',          cat:'ai',      platform:'github' },
+  { id:'gh_weekly',  name:'GitHub Trending (주간)',  url:'https://github.com/trending?since=weekly',         cat:'ai',      platform:'github' },
+  { id:'gh_ai',      name:'GitHub Trending AI',      url:'https://github.com/trending?q=AI+agent&since=daily', cat:'ai',   platform:'github' },
+  { id:'gh_llm',     name:'GitHub Trending LLM',     url:'https://github.com/trending?q=LLM&since=daily',    cat:'ai',      platform:'github' },
+  { id:'gh_saas',    name:'GitHub Trending SaaS',    url:'https://github.com/trending?q=saas&since=weekly',  cat:'startup', platform:'github' },
+];
+
+const STARTUP_SOURCES = [
+  { id:'kised',      name:'창업진흥원',              url:'https://www.kised.or.kr/board.es?mid=a10305000000', cat:'startup', platform:'blog' },
+  { id:'bizinfo',    name:'Bizinfo',                  url:'https://www.bizinfo.go.kr/web/lay1/bbs/S1T122C128/AS/74/list.do', cat:'startup', platform:'blog' },
+  { id:'semas',      name:'소상공인진흥공단',         url:'https://www.semas.or.kr/web/main/index.kmdc',      cat:'startup', platform:'blog' },
+];
+
+const POLICY_SOURCES = [
+  { id:'koreaKr',    name:'정책브리핑',              url:'https://www.korea.kr/briefing/pressReleaseList.do', cat:'policy', platform:'blog' },
+  { id:'mss',        name:'중소벤처기업부',           url:'https://www.mss.go.kr/site/smba/main.do',          cat:'policy', platform:'blog' },
+  { id:'moel',       name:'고용노동부',               url:'https://www.moel.go.kr/news/enews/list.do',        cat:'policy', platform:'blog' },
+  { id:'work24',     name:'Work24',                   url:'https://www.work24.go.kr',                         cat:'policy', platform:'blog' },
+];
+
+// 포털 검색 URL 생성기
+const PORTAL_BUILDERS = {
+  naver:  (kw) => ({ name:`네이버뉴스: ${kw}`,   url:`https://search.naver.com/search.naver?where=news&query=${encodeURIComponent(kw)}&sm=tab_jum`,    platform:'naver'  }),
+  naverB: (kw) => ({ name:`네이버블로그: ${kw}`,  url:`https://search.naver.com/search.naver?where=blog&query=${encodeURIComponent(kw)}`,               platform:'naver'  }),
+  google: (kw) => ({ name:`구글뉴스: ${kw}`,      url:`https://news.google.com/search?q=${encodeURIComponent(kw)}&hl=ko&gl=KR&ceid=KR:ko`,             platform:'google' }),
+  daum:   (kw) => ({ name:`다음뉴스: ${kw}`,      url:`https://search.daum.net/search?w=news&q=${encodeURIComponent(kw)}`,                              platform:'daum'   }),
+  bing:   (kw) => ({ name:`Bing뉴스: ${kw}`,      url:`https://www.bing.com/news/search?q=${encodeURIComponent(kw)}&setlang=ko`,                        platform:'bing'   }),
+  reddit: (kw) => ({ name:`Reddit: ${kw}`,         url:`https://www.reddit.com/search/?q=${encodeURIComponent(kw)}&sort=new&type=link`,                 platform:'reddit' }),
+  github: (kw) => ({ name:`GitHub: ${kw}`,         url:`https://github.com/search?q=${encodeURIComponent(kw)}&type=repositories&sort=updated`,          platform:'github' }),
+  youtube:(kw) => ({ name:`YouTube: ${kw}`,        url:`https://www.youtube.com/results?search_query=${encodeURIComponent(kw)}`,                        platform:'youtube'}),
 };
 
 const CAT_META = {
-  ai:      { label: 'AI 비즈니스', emoji: '🤖', cls: 'ai' },
-  startup: { label: '창업·부업',   emoji: '🚀', cls: 'startup' },
-  policy:  { label: '정책·지원사업', emoji: '🏛️', cls: 'policy' },
-  column:  { label: '현장 칼럼',  emoji: '✍️', cls: 'column' },
+  ai:      { label:'AI 비즈니스', emoji:'🤖', cls:'ai' },
+  startup: { label:'창업·부업',   emoji:'🚀', cls:'startup' },
+  policy:  { label:'정책·지원사업',emoji:'🏛️', cls:'policy' },
+  column:  { label:'현장 칼럼',   emoji:'✍️', cls:'column' },
 };
 
-// ── AI SCORING ENGINE ──────────────────────────────────
-function scoreArticle(item) {
-  const text = (item.title + ' ' + item.summary).toLowerCase();
-
-  // Traffic score (검색 유입 가능성)
-  let traffic = 40;
-  const highTrafficKw = ['chatgpt', 'claude', 'gemini', 'ai', '창업', '지원금', '부업', '자동화', '지원사업', '정책자금'];
-  highTrafficKw.forEach(kw => { if (text.includes(kw)) traffic = Math.min(100, traffic + 8); });
-
-  // Revenue score (광고 수익성)
-  let revenue = 35;
-  const revKw = ['비즈니스', 'saas', '수익', '창업', '부업', '판매', '마케팅', '고객', '매출', '지원금'];
-  revKw.forEach(kw => { if (text.includes(kw)) revenue = Math.min(100, revenue + 7); });
-
-  // Practical score (실무 활용성)
-  let practical = 45;
-  const practKw = ['활용법', '방법', '전략', '노하우', '가이드', '사례', '경험', '자동화', '최적화', '팁'];
-  practKw.forEach(kw => { if (text.includes(kw)) practical = Math.min(100, practical + 8); });
-
-  // Freshness (최신성) — based on source recency indicator
-  const freshness = item.freshness || 75;
-
-  const final = Math.round(
-    traffic * 0.4 + revenue * 0.3 + practical * 0.2 + freshness * 0.1
-  );
-
-  return { traffic, revenue, practical, freshness, final };
-}
-
-function scoreBadge(score) {
-  if (score >= 90) return { cls: 'excellent', text: '🔥 즉시 기사 작성' };
-  if (score >= 80) return { cls: 'priority',  text: '⭐ 우선 검토' };
-  if (score >= 70) return { cls: 'review',    text: '📋 보관' };
-  return             { cls: 'skip',       text: '⛔ 제외' };
-}
-
-function scoreColorCls(score) {
-  if (score >= 90) return 'score-90';
-  if (score >= 80) return 'score-80';
-  if (score >= 70) return 'score-70';
-  return 'score-low';
-}
+const QUICK_KEYWORDS = {
+  ai:      ['ChatGPT 활용법', 'Claude AI', 'AI 자동화', 'AI Agent', 'Gemini 비즈니스', 'AI 직원', 'LLM 활용'],
+  startup: ['무자본 창업', 'SaaS 창업', '직장인 부업', '스마트스토어', '디지털노마드', '1인기업'],
+  policy:  ['소상공인 지원금', '창업지원금', '청년창업', '정책자금', '고용지원금'],
+  column:  ['창업 실패 사례', 'AI 업무 활용', '마케팅 전략', '매출 증가 비법'],
+};
 
 // ── STATE ─────────────────────────────────────────────
 let allArticles = [];
 let filterCat   = 'all';
-let failureCount = 0;
-let collecting  = false;
+let failCount   = 0;
 let startTime   = null;
-
-// ── DOM ───────────────────────────────────────────────
-const $ = id => document.getElementById(id);
-const grid = $('cardsGrid');
+let collecting  = false;
+let stopFlag    = false;
+let keywords    = []; // {text, cat}
+let activeTab   = 'keyword';
 
 // ── INIT ──────────────────────────────────────────────
 (function init() {
-  // keyword chips
-  const chips = $('keywordChips');
-  const allKws = [...KEYWORDS.ai.slice(0,5), ...KEYWORDS.startup.slice(0,4), ...KEYWORDS.policy.slice(0,4)];
-  allKws.forEach(kw => {
-    const el = document.createElement('span');
-    el.className = 'chip';
-    el.textContent = kw;
-    el.onclick = () => {
-      const cur = $('inpCustomUrls').value.trim();
-      $('inpCustomUrls').value = (cur ? cur + '\n' : '') + `https://search.naver.com/search.naver?query=${encodeURIComponent(kw)}`;
-    };
-    chips.appendChild(el);
-  });
+  buildSourceToggles();
+  buildQuickKeywords();
 
-  // filter buttons
+  // cat filter
   document.querySelectorAll('.cat-btn').forEach(btn => {
     btn.onclick = () => {
       filterCat = btn.dataset.cat;
-      document.querySelectorAll('.cat-btn').forEach(b => {
-        b.className = 'cat-btn';
-      });
+      document.querySelectorAll('.cat-btn').forEach(b => b.className = 'cat-btn');
       btn.className = `cat-btn active-${filterCat}`;
       renderCards();
     };
   });
-
   $('selSort').onchange = renderCards;
 
-  $('btnCollect').onclick = startCollect;
-  $('btnClear').onclick = clearAll;
+  // keyword add
+  $('kwAddBtn').onclick = addKeyword;
+  $('kwInput').onkeydown = e => { if (e.key === 'Enter') addKeyword(); };
 
-  // Export buttons (both sets)
-  [$('btnExportXlsx'), $('btnExportXlsx2')].forEach(b => { b.onclick = exportXlsx; });
-  [$('btnExportCsv'),  $('btnExportCsv2')].forEach(b => {  b.onclick = exportCsv;  });
-  [$('btnExportMd'),   $('btnExportMd2')].forEach(b => {   b.onclick = exportMarkdown; });
+  $('btnCollect').onclick = startCollect;
+  $('btnStop').onclick    = () => { stopFlag = true; };
+  $('btnClear').onclick   = clearAll;
+
+  // exports
+  ['hExportXlsx','bExportXlsx'].forEach(id => $(id).onclick = exportXlsx);
+  ['hExportCsv', 'bExportCsv'].forEach(id =>  $(id).onclick = exportCsv);
+  ['hExportMd',  'bExportMd'].forEach(id =>   $(id).onclick = exportMarkdown);
 })();
 
-// ── COLLECT ───────────────────────────────────────────
-async function startCollect() {
-  if (collecting) return;
-  collecting = true;
-  startTime = Date.now();
-  failureCount = 0;
-  allArticles = [];
-  setStatus('running', '소재 수집 중...');
-  $('btnCollect').disabled = true;
-  $('progressWrap').classList.add('visible');
-  setProgress(5);
-  renderCards();
-  renderStats();
-
-  try {
-    const seeds = getSeeds();
-    const maxPages = parseInt($('inpMaxPages').value) || 8;
-    const seen = new Set();
-    const total = seeds.length;
-    let done = 0;
-
-    for (const seed of seeds) {
-      setStatus('running', `🔍 수집 중: ${seed.name}`);
-      setProgress(5 + Math.round((done / total) * 85));
-      try {
-        const urls = await discoverUrls(seed, maxPages);
-        for (const url of urls.slice(0, maxPages)) {
-          const article = await fetchArticle(seed, url);
-          if (!article) { failureCount++; renderStats(); continue; }
-          const key = article.title.toLowerCase().trim();
-          if (seen.has(key)) continue;
-          seen.add(key);
-          const scores = scoreArticle(article);
-          allArticles.push({ ...article, ...scores });
-          renderStats();
-          renderCards();
-        }
-      } catch (e) {
-        failureCount++;
-        renderStats();
-      }
-      done++;
-      setProgress(5 + Math.round((done / total) * 85));
-    }
-
-    setProgress(100);
-    setStatus('done', `✅ 수집 완료 — ${allArticles.length}건`);
-    toast(`${allArticles.length}건 수집 완료! 엑셀로 저장하세요.`, 'success');
-  } catch (e) {
-    setStatus('error', '❌ 오류: ' + e.message);
-    toast(e.message, 'error');
-  } finally {
-    $('btnCollect').disabled = false;
-    $('progressWrap').classList.remove('visible');
-    collecting = false;
-  }
+function buildSourceToggles() {
+  const groups = [
+    { el: 'srcAi',      srcs: AI_SOURCES,      cls: 'ai',      grp: 'ai-src'     },
+    { el: 'srcReddit',  srcs: REDDIT_SOURCES,   cls: 'reddit',  grp: 'reddit-src' },
+    { el: 'srcGithub',  srcs: GITHUB_SOURCES,   cls: 'github',  grp: 'github-src' },
+    { el: 'srcStartup', srcs: STARTUP_SOURCES,  cls: 'startup', grp: 'startup-src'},
+    { el: 'srcPolicy',  srcs: POLICY_SOURCES,   cls: 'policy',  grp: 'policy-src' },
+  ];
+  groups.forEach(({el, srcs, cls, grp}) => {
+    const container = $(el);
+    srcs.forEach(src => {
+      const wrap = document.createElement('div');
+      wrap.className = `src-toggle ${cls}`;
+      wrap.dataset.group = grp;
+      const pbIcon = { reddit:'🔴', github:'⚫', openai:'🟢', blog:'🔵', blog2:'🔵' };
+      wrap.innerHTML = `
+        <input type="checkbox" id="src_${src.id}" data-group="${grp}" ${['openai','anthropic','googleai','r_claude','r_chatgpt','gh_daily','gh_ai','kised','koreaKr'].includes(src.id)?'checked':''} />
+        <label for="src_${src.id}">${src.name}</label>`;
+      container.appendChild(wrap);
+    });
+  });
 }
 
-function getSeeds() {
-  const selCat = $('selCategory').value;
-  const selSrc = $('selSource').value;
-  const customRaw = $('inpCustomUrls').value.split(/\r?\n/).map(v => v.trim()).filter(Boolean);
-
-  let sourceSets = [];
-  if (selSrc === 'all') {
-    sourceSets = Object.values(SOURCES).flat();
-  } else if (SOURCES[selSrc]) {
-    sourceSets = SOURCES[selSrc];
-  } else if (selSrc === 'custom') {
-    sourceSets = [];
-  }
-
-  // category filter
-  let seeds = selCat === 'all' ? sourceSets : sourceSets.filter(s => s.cat === selCat);
-
-  // custom URLs
-  customRaw.forEach(url => {
-    seeds.push({ name: '커스텀', url, cat: selCat === 'all' ? 'column' : selCat });
+function buildQuickKeywords() {
+  const grid = $('quickKwGrid');
+  const cats = ['ai','startup','policy','column'];
+  cats.forEach(cat => {
+    const cm = CAT_META[cat];
+    QUICK_KEYWORDS[cat].forEach(kw => {
+      const btn = document.createElement('button');
+      btn.style.cssText = `
+        padding:6px 12px; border-radius:999px; font-size:12px; font-weight:600;
+        cursor:pointer; border:1.5px solid transparent; font-family:inherit;
+        color:var(--ink3); background:var(--bg2); border-color:var(--border);
+        transition:all .15s; text-align:left;
+      `;
+      btn.textContent = `${cm.emoji} ${kw}`;
+      btn.onclick = () => {
+        $('kwInput').value = kw;
+        $('kwCat').value   = cat;
+        addKeyword();
+      };
+      grid.appendChild(btn);
+    });
   });
+}
+
+// ── TAB ───────────────────────────────────────────────
+function switchTab(tab) {
+  activeTab = tab;
+  ['keyword','source','custom'].forEach(t => {
+    $(`tab${t.charAt(0).toUpperCase()+t.slice(1)}`).classList.toggle('active', t === tab);
+    $(`panel${t.charAt(0).toUpperCase()+t.slice(1)}`).classList.toggle('active', t === tab);
+  });
+}
+
+// ── KEYWORDS ──────────────────────────────────────────
+function addKeyword() {
+  const raw = $('kwInput').value.trim();
+  const cat = $('kwCat').value;
+  if (!raw) return;
+  // split by comma or newline
+  raw.split(/[,\n]+/).map(s => s.trim()).filter(Boolean).forEach(text => {
+    if (!keywords.find(k => k.text === text)) keywords.push({ text, cat });
+  });
+  $('kwInput').value = '';
+  renderKeywordTags();
+}
+
+function removeKeyword(idx) {
+  keywords.splice(idx, 1);
+  renderKeywordTags();
+}
+
+function renderKeywordTags() {
+  const wrap = $('kwTags');
+  wrap.innerHTML = keywords.map((k, i) => `
+    <span class="kw-tag ${k.cat}">
+      ${CAT_META[k.cat].emoji} ${escHtml(k.text)}
+      <span class="rm" onclick="removeKeyword(${i})">✕</span>
+    </span>`).join('');
+}
+
+function checkAll(group, checked) {
+  document.querySelectorAll(`input[data-group="${group}"]`).forEach(el => el.checked = checked);
+}
+
+// ── SEED BUILDER ─────────────────────────────────────
+function buildSeeds() {
+  const seeds = [];
+  const maxPages = parseInt($('inpMaxPages').value) || 6;
+
+  if (activeTab === 'keyword') {
+    // 키워드 × 포털 조합
+    const portals = {
+      naver:  $('pNaver').checked,
+      naverB: $('pNaverB').checked,
+      google: $('pGoogle').checked,
+      daum:   $('pDaum').checked,
+      bing:   $('pBing').checked,
+      reddit: $('pReddit').checked,
+      github: $('pGithub').checked,
+      youtube:$('pYoutube').checked,
+    };
+    keywords.forEach(kw => {
+      Object.entries(portals).forEach(([key, on]) => {
+        if (!on) return;
+        const built = PORTAL_BUILDERS[key](kw.text);
+        seeds.push({ name: built.name, url: built.url, cat: kw.cat, platform: built.platform });
+      });
+    });
+    // 키워드 없으면 기본 소스
+    if (keywords.length === 0) {
+      toast('키워드를 최소 1개 입력하세요.', 'error');
+    }
+  } else if (activeTab === 'source') {
+    const allSrcs = [...AI_SOURCES, ...REDDIT_SOURCES, ...GITHUB_SOURCES, ...STARTUP_SOURCES, ...POLICY_SOURCES];
+    allSrcs.forEach(src => {
+      const el = $(`src_${src.id}`);
+      if (el && el.checked) seeds.push(src);
+    });
+  } else if (activeTab === 'custom') {
+    const cat = $('customCat').value;
+    const urls = $('customUrls').value.split(/\r?\n/).map(v => v.trim()).filter(Boolean);
+    urls.forEach(url => seeds.push({ name: '커스텀', url, cat, platform: detectPlatform(url) }));
+  }
 
   return seeds;
 }
 
-async function discoverUrls(seed, maxPages) {
-  const urls = [seed.url];
+function detectPlatform(url) {
+  if (/naver\.com/i.test(url))   return 'naver';
+  if (/google\.com/i.test(url))  return 'google';
+  if (/reddit\.com/i.test(url))  return 'reddit';
+  if (/github\.com/i.test(url))  return 'github';
+  if (/daum\.net/i.test(url))    return 'daum';
+  if (/bing\.com/i.test(url))    return 'bing';
+  if (/youtube\.com/i.test(url)) return 'youtube';
+  return 'blog';
+}
+
+// ── COLLECT ───────────────────────────────────────────
+async function startCollect() {
+  const seeds = buildSeeds();
+  if (!seeds.length) return;
+
+  collecting = true; stopFlag = false;
+  startTime = Date.now(); failCount = 0; allArticles = [];
+  setStatus('running', '소재 수집 중...');
+  $('btnCollect').disabled = true;
+  $('btnStop').style.display = 'inline-flex';
+  $('progressWrap').classList.add('visible');
+  setProgress(3);
+  renderCards(); renderStats();
+
+  const delay = parseInt($('inpDelay').value) || 800;
+  const timeout = (parseInt($('inpTimeout').value) || 20) * 1000;
+  const maxPages = parseInt($('inpMaxPages').value) || 6;
+  const seen = new Set();
+  const total = seeds.length;
+  let done = 0;
+
   try {
-    const text = await jinaFetch(seed.url, 15000);
-    const found = extractUrls(text, seed.url);
-    found.slice(0, maxPages - 1).forEach(u => { if (!urls.includes(u)) urls.push(u); });
+    for (const seed of seeds) {
+      if (stopFlag) break;
+      setStatus('running', `🔍 ${seed.name}`);
+      setProgress(3 + Math.round((done / total) * 90));
+
+      try {
+        const urls = await discoverUrls(seed, maxPages, timeout);
+        for (const url of urls.slice(0, maxPages)) {
+          if (stopFlag) break;
+          const art = await fetchArticle(seed, url, timeout);
+          if (!art) { failCount++; renderStats(); continue; }
+          const key = art.title.toLowerCase().replace(/\s+/g,'').slice(0,40);
+          if (seen.has(key)) continue;
+          seen.add(key);
+          const scores = scoreArticle(art);
+          allArticles.push({ ...art, ...scores });
+          renderStats(); renderCards();
+          if (delay > 0) await sleep(delay);
+        }
+      } catch (e) { failCount++; renderStats(); }
+
+      done++;
+      setProgress(3 + Math.round((done / total) * 90));
+    }
+    setProgress(100);
+    const msg = stopFlag ? `⏹ 중지됨 — ${allArticles.length}건 수집` : `✅ 완료 — ${allArticles.length}건`;
+    setStatus(stopFlag ? 'error' : 'done', msg);
+    if (!stopFlag) toast(`${allArticles.length}건 수집 완료! 엑셀로 저장하세요. 📊`, 'success');
+  } catch(e) {
+    setStatus('error', '❌ 오류: ' + e.message);
+    toast(e.message, 'error');
+  } finally {
+    collecting = false; stopFlag = false;
+    $('btnCollect').disabled = false;
+    $('btnStop').style.display = 'none';
+    $('progressWrap').classList.remove('visible');
+  }
+}
+
+async function discoverUrls(seed, maxPages, timeout) {
+  const urls = [seed.url];
+  // Reddit, GitHub, 포털 검색결과는 시드 URL 자체가 목록 — 링크 발굴 X
+  const noDiscover = ['reddit','github','naver','google','daum','bing','youtube'];
+  if (noDiscover.includes(seed.platform)) return urls;
+  try {
+    const text = await jinaFetch(seed.url, timeout);
+    extractUrls(text, seed.url).slice(0, maxPages - 1).forEach(u => {
+      if (!urls.includes(u)) urls.push(u);
+    });
   } catch (_) {}
   return urls;
 }
 
-async function fetchArticle(seed, url) {
+async function fetchArticle(seed, url, timeout) {
   try {
-    const text = await jinaFetch(url, 18000);
-    if (!text || text.length < 100) return null;
+    const text = await jinaFetch(url, timeout);
+    if (!text || text.length < 80) return null;
     const title = extractTitle(text) || seed.name;
+    if (title.length < 5) return null;
     const summary = extractSummary(text, title);
-    if (!summary) return null;
     return {
       category: seed.cat,
       source_name: seed.name,
+      platform: seed.platform || 'blog',
       title,
-      summary,
+      summary: summary || title,
       url,
       fetched_at: new Date().toISOString(),
       freshness: computeFreshness(text),
     };
-  } catch (_) {
-    return null;
-  }
+  } catch (_) { return null; }
 }
 
 async function jinaFetch(url, timeoutMs) {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
-    const readerUrl = 'https://r.jina.ai/' + url;
-    const res = await fetch(readerUrl, { signal: controller.signal });
+    // Use Jina Reader as CORS-bypass proxy
+    const res = await fetch('https://r.jina.ai/' + url, { signal: ctrl.signal });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     return await res.text();
-  } finally {
-    clearTimeout(timer);
-  }
+  } finally { clearTimeout(t); }
 }
 
-function extractTitle(text) {
-  const lines = text.split('\n');
-  const titleLine = lines.find(l => /^Title:\s*/i.test(l));
-  if (titleLine) return titleLine.replace(/^Title:\s*/i, '').trim().slice(0, 80);
-  const h1 = lines.find(l => /^#\s+/.test(l));
-  if (h1) return h1.replace(/^#+\s+/, '').trim().slice(0, 80);
-  const nonEmpty = lines.find(l => l.trim().length > 20 && !l.startsWith('http'));
-  return nonEmpty ? nonEmpty.trim().slice(0, 80) : '';
+// ── SCORING ───────────────────────────────────────────
+function scoreArticle(item) {
+  const text = (item.title + ' ' + item.summary).toLowerCase();
+  let traffic = 40, revenue = 35, practical = 45;
+
+  // Platform bonus
+  const platBonus = { naver:+8, google:+6, reddit:+5, github:+4, daum:+4, bing:+3, openai:+7, blog:+3, youtube:+5 };
+  const pb = platBonus[item.platform] || 0;
+  traffic  += pb; revenue += pb; practical += pb;
+
+  const tKw  = ['chatgpt','claude','gemini','ai','창업','지원금','부업','자동화','정책자금','llm','agent'];
+  const rKw  = ['비즈니스','saas','수익','창업','부업','판매','마케팅','고객','매출','지원금'];
+  const pKw  = ['활용법','방법','전략','노하우','가이드','사례','경험','자동화','최적화','팁','튜토리얼'];
+  tKw.forEach(k => { if (text.includes(k)) traffic  = Math.min(100, traffic  + 7); });
+  rKw.forEach(k => { if (text.includes(k)) revenue  = Math.min(100, revenue  + 7); });
+  pKw.forEach(k => { if (text.includes(k)) practical= Math.min(100, practical+ 7); });
+
+  const freshness = item.freshness || 70;
+  const final = Math.round(traffic * .4 + revenue * .3 + practical * .2 + freshness * .1);
+  return { traffic, revenue, practical, freshness, final };
 }
 
-function extractSummary(text, title) {
-  const clean = text
-    .replace(/https?:\/\/\S+/g, '')
-    .replace(/[#*>`|]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-  // Find a sentence after the title
-  const idx = clean.toLowerCase().indexOf(title.toLowerCase().slice(0, 20));
-  const start = idx >= 0 ? idx + title.length : 0;
-  const snippet = clean.slice(start, start + 500).trim();
-  const sentences = snippet.match(/[^.!?。]{15,}[.!?。]/g) || [];
-  if (sentences.length >= 1) return sentences.slice(0, 2).join(' ').trim().slice(0, 200);
-  return snippet.slice(0, 180) || clean.slice(0, 180);
+function scoreBadge(s) {
+  if (s >= 90) return { cls:'excellent', text:'🔥 즉시 기사 작성' };
+  if (s >= 80) return { cls:'priority',  text:'⭐ 우선 검토' };
+  if (s >= 70) return { cls:'review',    text:'📋 보관' };
+  return             { cls:'skip',       text:'⛔ 제외' };
 }
-
-function extractUrls(text, baseUrl) {
-  let base;
-  try { base = new URL(baseUrl); } catch { return []; }
-  const matches = text.match(/https?:\/\/[^\s)"']+/g) || [];
-  return [...new Set(matches)].filter(u => {
-    try {
-      const p = new URL(u);
-      return p.hostname === base.hostname &&
-        !/\.(jpg|jpeg|png|gif|webp|svg|css|js|pdf|zip|hwp)$/i.test(p.pathname);
-    } catch { return false; }
-  }).sort((a, b) => urlScore(b) - urlScore(a));
-}
-
-function urlScore(url) {
-  const l = url.toLowerCase();
-  let s = 0;
-  ['view', 'detail', 'article', 'notice', 'news', 'press', 'bbs', 'board'].forEach(t => { if (l.includes(t)) s += 2; });
-  if (/[?&](seq|id|no|ntt|article|dataid)=/i.test(l)) s += 3;
-  return s;
-}
-
-function computeFreshness(text) {
-  const today = new Date();
-  const year = today.getFullYear();
-  const recentYear = new RegExp(`${year}|${year - 1}`);
-  return recentYear.test(text) ? 85 : 65;
-}
+function scoreClsCls(s) { return s>=90?'score-90':s>=80?'score-80':s>=70?'score-70':'score-low'; }
 
 // ── RENDER ────────────────────────────────────────────
 function renderCards() {
@@ -1154,56 +900,53 @@ function renderCards() {
   const minScore = parseInt($('selScoreMin').value) || 0;
   if (filterCat !== 'all') items = items.filter(a => a.category === filterCat);
   items = items.filter(a => a.final >= minScore);
-
   const sort = $('selSort').value;
-  if (sort === 'score') items.sort((a, b) => b.final - a.final);
-  else if (sort === 'time') items.sort((a, b) => b.fetched_at.localeCompare(a.fetched_at));
-  else items.sort((a, b) => a.title.localeCompare(b.title, 'ko'));
+  if (sort === 'score')      items.sort((a,b) => b.final - a.final);
+  else if (sort === 'time')  items.sort((a,b) => b.fetched_at.localeCompare(a.fetched_at));
+  else                       items.sort((a,b) => a.title.localeCompare(b.title, 'ko'));
 
   $('resultCount').textContent = `— ${items.length}건`;
 
-  if (items.length === 0) {
-    if (allArticles.length === 0) {
-      grid.innerHTML = `<div class="empty-state">
-        <span class="empty-icon">📡</span>
-        <h3>아직 수집된 소재가 없습니다</h3>
-        <p>카테고리와 소스를 선택한 뒤 "소재 수집 시작" 버튼을 누르세요.</p>
-      </div>`;
-    } else {
-      grid.innerHTML = `<div class="empty-state">
-        <span class="empty-icon">🔍</span>
-        <h3>필터 조건에 맞는 소재가 없습니다</h3>
-        <p>카테고리 또는 점수 필터를 조정해 보세요.</p>
-      </div>`;
-    }
+  if (!items.length) {
+    $('cardsGrid').innerHTML = allArticles.length === 0
+      ? `<div class="empty-state"><span class="empty-icon">📡</span><h3>아직 수집된 소재가 없습니다</h3><p>키워드를 입력하거나 소스를 선택하고 수집을 시작하세요.</p></div>`
+      : `<div class="empty-state"><span class="empty-icon">🔍</span><h3>필터 조건에 맞는 소재가 없습니다</h3><p>카테고리 또는 점수 필터를 조정해 보세요.</p></div>`;
     return;
   }
 
-  grid.innerHTML = items.map((a, i) => {
-    const cm = CAT_META[a.category] || CAT_META.column;
+  const platBadge = {
+    naver:  'pb-naver',  google: 'pb-google', reddit: 'pb-reddit',
+    github: 'pb-github', daum:   'pb-daum',   bing:   'pb-bing',
+    openai: 'pb-openai', blog:   'pb-blog',   youtube:'pb-google',
+  };
+  const platName = {
+    naver:'네이버', google:'구글', reddit:'Reddit', github:'GitHub',
+    daum:'다음', bing:'Bing', openai:'OpenAI', blog:'공식블로그', youtube:'YouTube',
+  };
+
+  $('cardsGrid').innerHTML = items.map((a, i) => {
+    const cm    = CAT_META[a.category] || CAT_META.column;
     const badge = scoreBadge(a.final);
-    const scCls = scoreColorCls(a.final);
-    const timeStr = a.fetched_at ? new Date(a.fetched_at).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : '';
+    const scCls = scoreClsCls(a.final);
+    const pbCls = platBadge[a.platform] || 'pb-blog';
+    const pbNm  = platName[a.platform]  || a.platform;
+    const timeStr = a.fetched_at ? new Date(a.fetched_at).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}) : '';
     return `
-    <article class="article-card cat-${a.category}" id="card-${i}">
+    <article class="article-card cat-${a.category}">
       <div class="card-num">${i + 1}</div>
       <div class="card-body">
         <div class="card-meta">
           <span class="cat-tag ${cm.cls}">${cm.emoji} ${cm.label}</span>
-          <span class="time-tag">${a.source_name}</span>
-          ${timeStr ? `<span class="time-tag">${timeStr}</span>` : ''}
+          <span class="platform-badge ${pbCls}">${pbNm}</span>
+          <span class="src-tag">${escHtml(a.source_name)}</span>
+          ${timeStr ? `<span class="src-tag">${timeStr}</span>` : ''}
         </div>
         <div class="card-title">${escHtml(a.title)}</div>
         <div class="card-summary">${escHtml(a.summary)}</div>
-        <a class="card-url" href="${escHtml(a.url)}" target="_blank" rel="noopener">
-          🔗 ${escHtml(a.url)}
-        </a>
+        <a class="card-url" href="${escHtml(a.url)}" target="_blank" rel="noopener">🔗 ${escHtml(a.url.length > 80 ? a.url.slice(0,80)+'...' : a.url)}</a>
       </div>
       <div class="card-scores">
-        <div>
-          <div class="final-score ${scCls}">${a.final}</div>
-          <div class="score-label">최종점수</div>
-        </div>
+        <div><div class="final-score ${scCls}">${a.final}</div><div class="score-label">최종점수</div></div>
         <div class="score-badge ${badge.cls}">${badge.text}</div>
       </div>
     </article>`;
@@ -1212,185 +955,190 @@ function renderCards() {
 
 function renderStats() {
   const elapsed = startTime ? Math.round((Date.now() - startTime) / 1000) : 0;
-  $('statTotal').textContent = allArticles.length;
-  $('statHigh').textContent  = allArticles.filter(a => a.final >= 90).length;
-  $('statMid').textContent   = allArticles.filter(a => a.final >= 80 && a.final < 90).length;
-  $('statFail').textContent  = failureCount;
-  $('statElapsed').textContent = elapsed + 's';
+  $('stTotal').textContent = allArticles.length;
+  $('stHigh').textContent  = allArticles.filter(a => a.final >= 90).length;
+  $('stMid').textContent   = allArticles.filter(a => a.final >= 80 && a.final < 90).length;
+  $('stFail').textContent  = failCount;
+  $('stTime').textContent  = elapsed + 's';
 }
 
 // ── EXPORTS ───────────────────────────────────────────
 function getExportItems() {
-  let items = [...allArticles].sort((a, b) => b.final - a.final);
-  const minScore = parseInt($('selScoreMin').value) || 0;
-  return items.filter(a => a.final >= minScore);
+  return [...allArticles]
+    .filter(a => a.final >= (parseInt($('selScoreMin').value) || 0))
+    .sort((a,b) => b.final - a.final);
 }
 
 function exportXlsx() {
   const items = getExportItems();
   if (!items.length) { toast('수집된 소재가 없습니다.', 'error'); return; }
-
-  const headers = ['#', '카테고리', '제목', '요약', 'URL', '검색유입(40%)', '광고수익(30%)', '실무활용(20%)', '최신성(10%)', '최종점수', '등급', '수집시각'];
+  const headers = ['#','카테고리','플랫폼','출처','제목','요약','URL','검색유입(40%)','광고수익(30%)','실무활용(20%)','최신성(10%)','최종점수','등급','수집시각'];
   const rows = items.map((a, i) => {
-    const badge = scoreBadge(a.final);
     const cm = CAT_META[a.category] || CAT_META.column;
-    return [
-      i + 1,
-      cm.label,
-      a.title,
-      a.summary,
-      a.url,
-      a.traffic,
-      a.revenue,
-      a.practical,
-      a.freshness,
-      a.final,
-      badge.text.replace(/[🔥⭐📋⛔]/g, '').trim(),
-      a.fetched_at ? new Date(a.fetched_at).toLocaleString('ko-KR') : ''
-    ];
+    const badge = scoreBadge(a.final);
+    const platName = {naver:'네이버',google:'구글',reddit:'Reddit',github:'GitHub',daum:'다음',bing:'Bing',openai:'OpenAI',blog:'공식블로그',youtube:'YouTube'};
+    return [i+1, cm.label, platName[a.platform]||a.platform, a.source_name, a.title, a.summary, a.url,
+            a.traffic, a.revenue, a.practical, a.freshness, a.final,
+            badge.text.replace(/[🔥⭐📋⛔]/g,'').trim(),
+            a.fetched_at ? new Date(a.fetched_at).toLocaleString('ko-KR') : ''];
   });
-
   const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-
-  // Column widths
-  ws['!cols'] = [
-    {wch: 4}, {wch: 14}, {wch: 45}, {wch: 60}, {wch: 55},
-    {wch: 10}, {wch: 10}, {wch: 10}, {wch: 8}, {wch: 8}, {wch: 12}, {wch: 18}
-  ];
-
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'COA NEWS 소재');
+  ws['!cols'] = [{wch:4},{wch:14},{wch:10},{wch:16},{wch:48},{wch:60},{wch:50},{wch:10},{wch:10},{wch:10},{wch:8},{wch:8},{wch:12},{wch:18}];
 
   // Summary sheet
-  const cats = ['ai', 'startup', 'policy', 'column'];
-  const summaryData = [
-    ['COA NEWS AI Content Engine — 수집 요약', '', ''],
+  const cats = ['ai','startup','policy','column'];
+  const plats = ['naver','google','reddit','github','daum','bing','blog','openai'];
+  const platKr = {naver:'네이버',google:'구글',reddit:'Reddit',github:'GitHub',daum:'다음',bing:'Bing',blog:'공식블로그',openai:'OpenAI'};
+  const summary = [
+    ['COA NEWS AI Content Engine — 수집 요약','',''],
     ['수집 일시', new Date().toLocaleString('ko-KR'), ''],
-    ['', '', ''],
-    ['카테고리', '수집건수', '평균점수'],
+    ['','',''],
+    ['★ 카테고리별','건수','평균점수'],
     ...cats.map(c => {
-      const catItems = items.filter(a => a.category === c);
-      const avg = catItems.length ? Math.round(catItems.reduce((s, a) => s + a.final, 0) / catItems.length) : 0;
-      return [CAT_META[c].label, catItems.length, avg];
+      const ci = items.filter(a => a.category===c);
+      const avg = ci.length ? Math.round(ci.reduce((s,a)=>s+a.final,0)/ci.length) : 0;
+      return [CAT_META[c].label, ci.length, avg];
     }),
-    ['', '', ''],
-    ['전체 합계', items.length, items.length ? Math.round(items.reduce((s, a) => s + a.final, 0) / items.length) : 0],
-    ['즉시 기사 (90+)', items.filter(a => a.final >= 90).length, ''],
-    ['우선 검토 (80~89)', items.filter(a => a.final >= 80 && a.final < 90).length, ''],
+    ['','',''],
+    ['★ 플랫폼별','건수','%'],
+    ...plats.map(p => {
+      const pi = items.filter(a=>a.platform===p);
+      return [platKr[p]||p, pi.length, items.length?Math.round(pi.length/items.length*100)+'%':'0%'];
+    }),
+    ['','',''],
+    ['전체 합계', items.length, ''],
+    ['🔥 즉시 기사 (90+)', items.filter(a=>a.final>=90).length,''],
+    ['⭐ 우선 검토 (80~89)', items.filter(a=>a.final>=80&&a.final<90).length,''],
+    ['📋 보관 (70~79)', items.filter(a=>a.final>=70&&a.final<80).length,''],
   ];
-  const ws2 = XLSX.utils.aoa_to_sheet(summaryData);
-  ws2['!cols'] = [{wch: 20}, {wch: 10}, {wch: 10}];
-  XLSX.utils.book_append_sheet(wb, ws2, '요약');
+  const ws2 = XLSX.utils.aoa_to_sheet(summary);
+  ws2['!cols'] = [{wch:22},{wch:10},{wch:10}];
 
-  const dateStr = new Date().toISOString().slice(0, 10);
-  XLSX.writeFile(wb, `coa_news_소재_${dateStr}.xlsx`);
-  toast('엑셀 파일이 다운로드되었습니다! 📊', 'success');
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws,  'COA NEWS 소재');
+  XLSX.utils.book_append_sheet(wb, ws2, '요약');
+  XLSX.writeFile(wb, `coa_news_소재_${new Date().toISOString().slice(0,10)}.xlsx`);
+  toast('엑셀 파일 다운로드 완료! 📊', 'success');
 }
 
 function exportCsv() {
   const items = getExportItems();
   if (!items.length) { toast('수집된 소재가 없습니다.', 'error'); return; }
-  const headers = ['순번', '카테고리', '제목', '요약', 'URL', '검색유입', '광고수익', '실무활용', '최신성', '최종점수'];
-  const csvRows = [
-    headers.join(','),
-    ...items.map((a, i) => {
-      const cm = CAT_META[a.category] || CAT_META.column;
-      return [
-        i + 1,
-        csvCell(cm.label),
-        csvCell(a.title),
-        csvCell(a.summary),
-        csvCell(a.url),
-        a.traffic, a.revenue, a.practical, a.freshness, a.final
-      ].join(',');
-    })
-  ];
-  downloadFile(`coa_news_소재_${new Date().toISOString().slice(0,10)}.csv`, '\uFEFF' + csvRows.join('\n'), 'text/csv');
-  toast('CSV 파일이 다운로드되었습니다! 📋', 'success');
+  const hdr = ['순번','카테고리','플랫폼','출처','제목','요약','URL','검색유입','광고수익','실무활용','최신성','최종점수'];
+  const rows = [hdr.join(','), ...items.map((a,i) => {
+    const cm = CAT_META[a.category]||CAT_META.column;
+    const platKr = {naver:'네이버',google:'구글',reddit:'Reddit',github:'GitHub',daum:'다음',bing:'Bing',blog:'공식블로그',openai:'OpenAI'};
+    return [i+1,csvCell(cm.label),csvCell(platKr[a.platform]||a.platform),csvCell(a.source_name),csvCell(a.title),csvCell(a.summary),csvCell(a.url),a.traffic,a.revenue,a.practical,a.freshness,a.final].join(',');
+  })];
+  downloadFile(`coa_news_소재_${new Date().toISOString().slice(0,10)}.csv`, '\uFEFF'+rows.join('\n'), 'text/csv');
+  toast('CSV 파일 다운로드 완료! 📋', 'success');
 }
 
 function exportMarkdown() {
   const items = getExportItems();
   if (!items.length) { toast('수집된 소재가 없습니다.', 'error'); return; }
-  const dateStr = new Date().toLocaleDateString('ko-KR');
+  const platKr = {naver:'네이버',google:'구글',reddit:'Reddit',github:'GitHub',daum:'다음',bing:'Bing',blog:'공식블로그',openai:'OpenAI'};
   const lines = [
-    `# COA NEWS 소재 목록 — ${dateStr}`,
-    '',
-    `> 총 ${items.length}건 수집 | AI Content Engine 자동 생성`,
+    `# COA NEWS 소재 목록 — ${new Date().toLocaleDateString('ko-KR')}`,
+    `> 총 ${items.length}건 수집 | COA NEWS AI Content Engine`,
     '',
   ];
-
   items.forEach((a, i) => {
-    const cm = CAT_META[a.category] || CAT_META.column;
-    lines.push(`${i + 1}) ${a.title}`, '');
-    lines.push(`${a.summary}`);
+    const cm = CAT_META[a.category]||CAT_META.column;
+    lines.push(`${i+1}) ${a.title}`, '');
+    lines.push(a.summary);
     lines.push(`🔗 ${a.url}`);
-    lines.push(`📊 점수: ${a.final}점 | ${cm.emoji} ${cm.label} | 출처: ${a.source_name}`);
+    lines.push(`📊 ${a.final}점 | ${cm.emoji} ${cm.label} | ${platKr[a.platform]||a.platform} | ${a.source_name}`);
     lines.push('');
   });
-
   const content = lines.join('\n');
   downloadFile(`coa_news_소재_${new Date().toISOString().slice(0,10)}.md`, content, 'text/markdown');
-
-  // Also copy to clipboard
   navigator.clipboard.writeText(content).then(
     () => toast('소재목록 복사 + Markdown 다운로드 완료! 📝', 'success'),
-    () => toast('Markdown 파일을 다운로드했습니다. 📝', 'success')
+    () => toast('Markdown 파일 다운로드 완료! 📝', 'success')
   );
 }
 
-// ── UTILITIES ─────────────────────────────────────────
+// ── UTILS ─────────────────────────────────────────────
 function clearAll() {
-  allArticles = [];
-  failureCount = 0;
-  startTime = null;
-  filterCat = 'all';
-  document.querySelectorAll('.cat-btn').forEach(b => b.className = 'cat-btn');
-  $('fAll').className = 'cat-btn active-all';
-  setStatus('ready', '초기화 완료. 다시 수집을 시작하세요.');
-  renderCards();
-  renderStats();
+  allArticles=[]; failCount=0; startTime=null; filterCat='all'; keywords=[];
+  document.querySelectorAll('.cat-btn').forEach(b=>b.className='cat-btn');
+  document.querySelector('.cat-btn[data-cat="all"]').className='cat-btn active-all';
+  renderKeywordTags(); renderCards(); renderStats();
+  setStatus('ready','초기화 완료.');
 }
 
 function setStatus(type, text) {
-  const pill = $('statusPill');
-  const pulse = $('pulseEl');
+  const pill = $('statusPill'); const pulse = $('pulseEl');
   $('statusText').textContent = text;
-  pill.className = 'status-pill ' + (type === 'running' ? 'running' : type === 'done' ? 'done' : type === 'error' ? 'error' : '');
-  pulse.style.display = type === 'running' ? 'block' : 'none';
+  pill.className = 'status-pill'+(type==='running'?' running':type==='done'?' done':type==='error'?' error':'');
+  pulse.style.display = type==='running'?'block':'none';
 }
 
-function setProgress(pct) {
-  $('progressBar').style.width = Math.min(100, Math.max(0, pct)) + '%';
-}
+function setProgress(pct) { $('progressBar').style.width = Math.min(100,Math.max(0,pct))+'%'; }
 
-function toast(msg, type = 'info') {
-  const tc = $('toastContainer');
-  const el = document.createElement('div');
-  el.className = `toast ${type}`;
-  el.innerHTML = `<span>${type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️'}</span><span>${escHtml(msg)}</span>`;
+function toast(msg, type='info') {
+  const tc=$('toastContainer');
+  const el=document.createElement('div');
+  el.className=`toast ${type}`;
+  el.innerHTML=`<span>${type==='success'?'✅':type==='error'?'❌':'ℹ️'}</span><span>${escHtml(msg)}</span>`;
   tc.appendChild(el);
-  setTimeout(() => {
-    el.classList.add('removing');
-    setTimeout(() => el.remove(), 300);
-  }, 4000);
+  setTimeout(()=>{ el.classList.add('removing'); setTimeout(()=>el.remove(),300); }, 4500);
 }
 
-function downloadFile(filename, content, mime) {
-  const blob = new Blob([content], { type: mime + ';charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = filename; a.click();
+function downloadFile(name, content, mime) {
+  const blob=new Blob([content],{type:mime+';charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download=name; a.click();
   URL.revokeObjectURL(url);
 }
 
-function csvCell(v) { return `"${String(v || '').replace(/"/g, '""')}"`; }
-function escHtml(v) {
-  return String(v || '').replace(/[&<>'\"]/g, c =>
-    ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+function extractTitle(text) {
+  const lines = text.split('\n');
+  const tl = lines.find(l=>/^Title:\s*/i.test(l));
+  if (tl) return tl.replace(/^Title:\s*/i,'').trim().slice(0,100);
+  const h1 = lines.find(l=>/^#\s+/.test(l));
+  if (h1) return h1.replace(/^#+\s+/,'').trim().slice(0,100);
+  const ne = lines.find(l=>l.trim().length>20&&!l.startsWith('http')&&!/^[*\->|]/.test(l.trim()));
+  return ne?ne.trim().slice(0,100):'';
 }
 
-// ── LIVE CLOCK ────────────────────────────────────────
+function extractSummary(text, title) {
+  const clean = text.replace(/https?:\/\/\S+/g,'').replace(/[#*>`|]/g,'').replace(/\s+/g,' ').trim();
+  const idx = clean.toLowerCase().indexOf(title.toLowerCase().slice(0,20));
+  const start = idx>=0?idx+title.length:0;
+  const snippet = clean.slice(start, start+600).trim();
+  const sents = snippet.match(/[^.!?。]{15,}[.!?。]/g)||[];
+  if (sents.length>=1) return sents.slice(0,2).join(' ').trim().slice(0,220);
+  return snippet.slice(0,200)||clean.slice(0,200);
+}
+
+function extractUrls(text, baseUrl) {
+  let base; try{ base=new URL(baseUrl); }catch{ return []; }
+  const ms=(text.match(/https?:\/\/[^\s)"']+/g)||[]);
+  return [...new Set(ms)].filter(u=>{
+    try{ const p=new URL(u); return p.hostname===base.hostname&&!/\.(jpg|jpeg|png|gif|webp|svg|css|js|pdf|zip|hwp)$/i.test(p.pathname); }
+    catch{ return false; }
+  }).sort((a,b)=>urlScore(b)-urlScore(a));
+}
+
+function urlScore(url) {
+  const l=url.toLowerCase(); let s=0;
+  ['view','detail','article','notice','news','press','bbs','board'].forEach(t=>{ if(l.includes(t))s+=2; });
+  if(/[?&](seq|id|no|ntt|article|dataid)=/i.test(l)) s+=3;
+  return s;
+}
+
+function computeFreshness(text) {
+  const y=new Date().getFullYear();
+  return new RegExp(`${y}|${y-1}`).test(text)?85:65;
+}
+
+function csvCell(v){ return `"${String(v||'').replace(/"/g,'""')}"`; }
+function escHtml(v){ return String(v||'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
+function $(id){ return document.getElementById(id); }
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
 setInterval(renderStats, 1000);
 </script>
 </body>
