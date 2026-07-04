@@ -14,8 +14,6 @@ AI_SOURCES = (
 # ── 창업·부업 소스 ────────────────────────────────────────────
 STARTUP_SOURCES = (
     SeedSource("startup_kised",  "창업진흥원",         ("https://www.kised.or.kr/board.es?mid=a10305000000",)),
-    SeedSource("startup_bizinfo","Bizinfo 창업",       ("https://www.bizinfo.go.kr/web/lay1/bbs/S1T122C128/AS/74/list.do",)),
-    SeedSource("startup_semas",  "소상공인진흥공단",   ("https://www.semas.or.kr/web/main/index.kmdc",)),
 )
 
 # ── 정책·지원사업 소스 ────────────────────────────────────────
@@ -25,6 +23,9 @@ POLICY_SOURCES = (
     SeedSource("policy_moel",    "고용노동부",         ("https://www.moel.go.kr/news/enews/list.do",)),
     SeedSource("policy_work24",  "Work24",             ("https://www.work24.go.kr",)),
     SeedSource("policy_data",    "공공데이터포털",     ("https://www.data.go.kr",)),
+    SeedSource("policy_bizinfo", "기업마당(Bizinfo)",  ("https://www.bizinfo.go.kr/web/lay1/bbs/S1T122C128/AS/74/list.do",)),
+    SeedSource("policy_semas",   "소상공인시장진흥공단", ("https://www.semas.or.kr/web/main/index.kmdc",)),
+    SeedSource("policy_kstartup","K-Startup",          ("https://www.k-startup.go.kr",)),
 )
 
 # ── 현장 칼럼 소스 ────────────────────────────────────────────

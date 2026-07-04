@@ -540,8 +540,6 @@ const GITHUB_SOURCES = [
 
 const STARTUP_SOURCES = [
   { id:'kised',      name:'창업진흥원',              url:'https://www.kised.or.kr/board.es?mid=a10305000000', cat:'startup', platform:'blog' },
-  { id:'bizinfo',    name:'Bizinfo',                  url:'https://www.bizinfo.go.kr/web/lay1/bbs/S1T122C128/AS/74/list.do', cat:'startup', platform:'blog' },
-  { id:'semas',      name:'소상공인진흥공단',         url:'https://www.semas.or.kr/web/main/index.kmdc',      cat:'startup', platform:'blog' },
 ];
 
 const POLICY_SOURCES = [
@@ -549,6 +547,9 @@ const POLICY_SOURCES = [
   { id:'mss',        name:'중소벤처기업부',           url:'https://www.mss.go.kr/site/smba/main.do',          cat:'policy', platform:'blog' },
   { id:'moel',       name:'고용노동부',               url:'https://www.moel.go.kr/news/enews/list.do',        cat:'policy', platform:'blog' },
   { id:'work24',     name:'Work24',                   url:'https://www.work24.go.kr',                         cat:'policy', platform:'blog' },
+  { id:'bizinfo',    name:'기업마당(Bizinfo)',        url:'https://www.bizinfo.go.kr/web/lay1/bbs/S1T122C128/AS/74/list.do', cat:'policy', platform:'blog' },
+  { id:'semas',      name:'소상공인시장진흥공단',     url:'https://www.semas.or.kr/web/main/index.kmdc',      cat:'policy', platform:'blog' },
+  { id:'kstartup',   name:'K-Startup',                url:'https://www.k-startup.go.kr',                      cat:'policy', platform:'blog' },
 ];
 
 // 포털 검색 URL 생성기
@@ -571,10 +572,26 @@ const CAT_META = {
 };
 
 const QUICK_KEYWORDS = {
-  ai:      ['ChatGPT 활용법', 'Claude AI', 'AI 자동화', 'AI Agent', 'Gemini 비즈니스', 'AI 직원', 'LLM 활용'],
-  startup: ['무자본 창업', 'SaaS 창업', '직장인 부업', '스마트스토어', '디지털노마드', '1인기업'],
-  policy:  ['소상공인 지원금', '창업지원금', '청년창업', '정책자금', '고용지원금'],
-  column:  ['창업 실패 사례', 'AI 업무 활용', '마케팅 전략', '매출 증가 비법'],
+  ai: [
+    '생성형 AI', 'AI 에이전트', '챗GPT', '클로드(Claude)', '제미나이',
+    'AI 자동화', '업무 자동화', 'AI 도입 사례', 'AI 생산성', 'LLM',
+    'AI 스타트업', 'AI 마케팅', 'AI 챗봇', '노코드', 'RPA',
+    'AI 반도체', '온디바이스 AI', 'AI 규제',
+  ],
+  startup: [
+    '창업', '부업', 'N잡', '사이드잡', '온라인 수익화',
+    '스마트스토어', '1인 기업', '무자본 창업', '프랜차이즈 창업', '배달 창업',
+    '유튜브 수익', '블로그 수익', '전자책 판매', '구매대행', '해외구매대행',
+    '공유오피스', '폐업', '재창업',
+  ],
+  policy: [
+    '정부지원사업', '소상공인 지원', '창업지원금', '중소기업 지원',
+    '예비창업패키지', '초기창업패키지', '청년창업', '청년정책',
+    '고용지원금', '바우처 사업', 'K-스타트업', '기업마당',
+    '정책자금', '소상공인 대출', '재난지원', '세제 혜택',
+    '중소벤처기업부', '고용노동부',
+  ],
+  column: ['창업 실패 사례', 'AI 업무 활용', '마케팅 전략', '매출 증가 비법'],
 };
 
 // ── STATE ─────────────────────────────────────────────
