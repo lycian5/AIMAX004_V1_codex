@@ -1,6 +1,6 @@
 const { getSupabase } = require('../lib/supabase');
 const { assertCronAuth } = require('../lib/cronAuth');
-const { getClaude } = require('../lib/claude');
+const { getOpenAI } = require('../lib/openai');
 const { getDatalabTrend } = require('../lib/naver');
 const { postBriefing } = require('../lib/slack');
 
@@ -24,10 +24,20 @@ const SUGGESTIONS_SCHEMA = {
           angle: { type: 'string' },
           keywords: { type: 'array', items: { type: 'string' } },
           reference_headlines: { type: 'array', items: { type: 'string' } },
-          quadrant: { type: 'string' },
-          interviewee: { type: 'string' },
+          // OpenAI strict 모드는 모든 필드를 required에 넣어야 해서, 선택 필드는 nullable 타입으로 표현한다.
+          quadrant: { type: ['string', 'null'] },
+          interviewee: { type: ['string', 'null'] },
         },
-        required: ['category', 'format', 'title', 'angle', 'keywords', 'reference_headlines'],
+        required: [
+          'category',
+          'format',
+          'title',
+          'angle',
+          'keywords',
+          'reference_headlines',
+          'quadrant',
+          'interviewee',
+        ],
         additionalProperties: false,
       },
     },
@@ -58,8 +68,8 @@ module.exports = async (req, res) => {
     const byCategory = groupByCategory(articles || []);
     const quadrants = await computeQuadrants(byCategory);
 
-    const claude = getClaude();
-    const suggestions = await requestSuggestions(claude, byCategory, quadrants);
+    const openai = getOpenAI();
+    const suggestions = await requestSuggestions(openai, byCategory, quadrants);
 
     if (suggestions.length) {
       const rows = suggestions.map((s) => ({
@@ -147,7 +157,7 @@ async function computeQuadrants(byCategory) {
   return quadrants;
 }
 
-async function requestSuggestions(claude, byCategory, quadrants) {
+async function requestSuggestions(openai, byCategory, quadrants) {
   const summary = Object.entries(byCategory)
     .map(([category, articles]) => {
       const label = CATEGORY_LABEL[category] || category;
@@ -180,21 +190,25 @@ async function requestSuggestions(claude, byCategory, quadrants) {
 - blue_ocean 키워드가 있으면 반드시 1건 이상 포함
 - 반드시 8건을 제안`;
 
-  const response = await claude.messages.create({
-    model: 'claude-opus-4-8',
-    max_tokens: 8000,
-    thinking: { type: 'adaptive' },
-    system,
-    messages: [{ role: 'user', content: `[오늘의 카테고리별 키워드 분석]\n\n${summary}` }],
-    output_config: {
-      effort: 'high',
-      format: { type: 'json_schema', schema: SUGGESTIONS_SCHEMA },
+  const response = await openai.chat.completions.create({
+    model: 'gpt-5.4',
+    messages: [
+      { role: 'system', content: system },
+      { role: 'user', content: `[오늘의 카테고리별 키워드 분석]\n\n${summary}` },
+    ],
+    response_format: {
+      type: 'json_schema',
+      json_schema: {
+        name: 'topic_suggestions',
+        schema: SUGGESTIONS_SCHEMA,
+        strict: true,
+      },
     },
   });
 
-  const textBlock = response.content.find((b) => b.type === 'text');
-  if (!textBlock) return [];
-  const parsed = JSON.parse(textBlock.text);
+  const content = response.choices[0]?.message?.content;
+  if (!content) return [];
+  const parsed = JSON.parse(content);
   return parsed.suggestions || [];
 }
 
