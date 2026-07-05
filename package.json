@@ -5,5 +5,10 @@
   "description": "Standalone policy article collector static UI for Vercel.",
   "scripts": {
     "start": "python -m http.server 8080 -d docs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.0",
+    "@supabase/supabase-js": "^2.45.0",
+    "cheerio": "^1.0.0"
   }
 }

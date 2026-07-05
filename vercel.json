@@ -1,9 +1,10 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "framework": null,
-  "installCommand": null,
-  "buildCommand": null,
   "outputDirectory": "docs",
   "cleanUrls": true,
-  "trailingSlash": false
+  "trailingSlash": false,
+  "crons": [
+    { "path": "/api/cron/collect", "schedule": "0 21 * * *" },
+    { "path": "/api/cron/suggest", "schedule": "0 22 * * *" }
+  ]
 }
