@@ -1,0 +1,539 @@
+#!/usr/bin/env node
+'use strict';
+
+const { spawn } = require('node:child_process');
+
+const VALID_CATEGORIES = new Set(['ai_business', 'startup', 'policy']);
+const DEFAULT_SOURCES = ['exa', 'rss', 'youtube', 'github'];
+
+const args = parseArgs(process.argv.slice(2));
+const dryRun = boolArg('dry-run', false);
+const sources = splitList(args.sources || process.env.AGENT_REACH_SOURCES || DEFAULT_SOURCES.join(','));
+const limitKeywords = intArg('limit-keywords', process.env.AGENT_REACH_LIMIT_KEYWORDS, 18);
+const exaResults = intArg('exa-results', process.env.AGENT_REACH_EXA_RESULTS, 5);
+const youtubeResults = intArg('youtube-results', process.env.AGENT_REACH_YOUTUBE_RESULTS, 3);
+const githubResults = intArg('github-results', process.env.AGENT_REACH_GITHUB_RESULTS, 5);
+const timeoutMs = intArg('timeout-ms', process.env.AGENT_REACH_TIMEOUT_MS, 45000);
+const jinaEnrich = boolArg('jina-enrich', parseBool(process.env.AGENT_REACH_JINA_ENRICH, false));
+
+main().catch((err) => {
+  console.error(JSON.stringify({ ok: false, error: err.message }, null, 2));
+  process.exitCode = 1;
+});
+
+async function main() {
+  const keywords = await loadKeywords();
+  const limitedKeywords = keywords.slice(0, limitKeywords);
+  const allRows = [];
+  const failures = [];
+
+  for (const keyword of limitedKeywords) {
+    const collectors = [
+      ['exa', collectExa],
+      ['rss', collectRss],
+      ['youtube', collectYoutube],
+      ['github', collectGithub],
+    ];
+
+    for (const [name, collector] of collectors) {
+      if (!sources.includes(name)) continue;
+      try {
+        const rows = await collector(keyword);
+        allRows.push(...rows);
+      } catch (err) {
+        failures.push({ source: name, keyword: keyword.keyword, error: err.message });
+      }
+    }
+  }
+
+  const rows = dedupeRows(allRows);
+  if (!dryRun && rows.length) {
+    await upsertRawArticles(rows);
+    await touchKeywords(rows);
+  }
+
+  const summary = {
+    ok: true,
+    dryRun,
+    sources,
+    keywordsProcessed: limitedKeywords.length,
+    rowsPrepared: rows.length,
+    rowsUpserted: dryRun ? 0 : rows.length,
+    failures,
+  };
+  console.log(JSON.stringify(summary, null, 2));
+}
+
+async function loadKeywords() {
+  const inlineKeywords = splitList(args.keywords || process.env.AGENT_REACH_KEYWORDS || '');
+  if (inlineKeywords.length) {
+    return inlineKeywords.map((entry) => {
+      const [keyword, category = 'ai_business'] = entry.split(':').map((part) => part.trim());
+      return normalizeKeyword({ id: null, keyword, category });
+    }).filter((item) => item.keyword);
+  }
+
+  const url = requiredEnv('SUPABASE_URL');
+  const qs = new URLSearchParams({
+    status: 'eq.active',
+    select: 'id,keyword,category,datalab_priority',
+    order: 'datalab_priority.asc',
+  });
+  const data = await supabaseRequest(`${url}/rest/v1/tracked_keywords?${qs.toString()}`);
+  return data.map(normalizeKeyword).filter((item) => item.keyword);
+}
+
+async function collectExa(keyword) {
+  const query = buildSearchQuery(keyword);
+  const output = await runCommand('mcporter', [
+    'call',
+    'exa.web_search_exa',
+    `query=${query}`,
+    `numResults=${exaResults}`,
+    '--output',
+    'json',
+    '--timeout',
+    String(timeoutMs),
+  ]);
+  const parsed = parseJson(output.stdout);
+  const content = Array.isArray(parsed?.content) ? parsed.content : [];
+  const rows = [];
+
+  for (const item of content) {
+    const result = parseExaText(item.text || '');
+    if (!result.url) continue;
+    const enriched = await maybeEnrichWithJina(result);
+    rows.push(makeRow(keyword, {
+      source: 'agent_reach_exa',
+      title: enriched.title || result.title,
+      url: result.url,
+      summary: enriched.summary || result.summary,
+      published_at: result.published_at,
+    }));
+  }
+  return rows;
+}
+
+async function collectYoutube(keyword) {
+  const query = buildSearchQuery(keyword);
+  const output = await runCommand('yt-dlp', [
+    '--dump-json',
+    '--skip-download',
+    '--no-warnings',
+    `ytsearch${youtubeResults}:${query}`,
+  ]);
+  return parseJsonLines(output.stdout)
+    .filter((item) => item && (item.webpage_url || item.url))
+    .map((item) => makeRow(keyword, {
+      source: 'agent_reach_youtube',
+      title: item.title,
+      url: item.webpage_url || item.url,
+      summary: item.description || item.channel || null,
+      published_at: yyyymmddToIso(item.upload_date),
+    }));
+}
+
+async function collectGithub(keyword) {
+  if (keyword.category !== 'ai_business') return [];
+  const query = `${keyword.keyword} AI agent automation`;
+  const output = await runCommand('gh', [
+    'search',
+    'repos',
+    query,
+    '--json',
+    'fullName,description,url,updatedAt',
+    '--limit',
+    String(githubResults),
+  ]);
+  const repos = parseJson(output.stdout);
+  if (!Array.isArray(repos)) return [];
+  return repos.map((repo) => makeRow(keyword, {
+    source: 'agent_reach_github',
+    title: repo.fullName,
+    url: repo.url,
+    summary: repo.description || null,
+    published_at: repo.updatedAt || null,
+  }));
+}
+
+async function collectRss(keyword) {
+  const feeds = parseFeeds(process.env.AGENT_REACH_RSS_FEEDS || '');
+  const matchingFeeds = feeds.filter((feed) => !feed.category || feed.category === keyword.category);
+  const rows = [];
+
+  for (const feed of matchingFeeds) {
+    try {
+      const res = await fetchWithTimeout(feed.url, timeoutMs);
+      if (!res.ok) throw new Error(`RSS HTTP ${res.status}: ${feed.url}`);
+      const xml = await res.text();
+      const entries = parseRssEntries(xml).slice(0, intArg('rss-results', process.env.AGENT_REACH_RSS_RESULTS, 8));
+      for (const entry of entries) {
+        if (!entry.url || !entry.title) continue;
+        if (!matchesKeyword(entry, keyword)) continue;
+        rows.push(makeRow(keyword, {
+          source: `agent_reach_rss:${feed.name}`,
+          title: entry.title,
+          url: entry.url,
+          summary: entry.summary,
+          published_at: entry.published_at,
+        }));
+      }
+    } catch (err) {
+      rows.push(makeFailureRow(keyword, `agent_reach_rss:${feed.name}`, feed.url, err.message));
+    }
+  }
+
+  return rows.filter((row) => !row.skip);
+}
+
+function parseRssEntries(xml) {
+  const itemBlocks = [...xml.matchAll(/<item\b[\s\S]*?<\/item>/gi)].map((match) => match[0]);
+  const atomBlocks = [...xml.matchAll(/<entry\b[\s\S]*?<\/entry>/gi)].map((match) => match[0]);
+  const blocks = itemBlocks.length ? itemBlocks : atomBlocks;
+  return blocks.map((block) => {
+    const atomHref = attr(block.match(/<link\b[^>]*href=["']([^"']+)["'][^>]*>/i)?.[0] || '', 'href');
+    return {
+      title: decodeXml(tag(block, 'title')),
+      url: decodeXml(tag(block, 'link') || atomHref || tag(block, 'guid')),
+      summary: stripTags(decodeXml(tag(block, 'description') || tag(block, 'summary') || tag(block, 'content'))).slice(0, 700) || null,
+      published_at: toIsoOrNull(tag(block, 'pubDate') || tag(block, 'published') || tag(block, 'updated')),
+    };
+  });
+}
+
+function matchesKeyword(entry, keyword) {
+  const haystack = `${entry.title || ''} ${entry.summary || ''}`.toLowerCase();
+  const terms = keyword.keyword.toLowerCase().split(/\s+/).filter(Boolean);
+  if (!terms.length) return true;
+  return terms.some((term) => haystack.includes(term));
+}
+
+async function maybeEnrichWithJina(result) {
+  if (!jinaEnrich && result.summary) return result;
+  try {
+    const res = await fetchWithTimeout(`https://r.jina.ai/${result.url}`, timeoutMs);
+    if (!res.ok) return result;
+    const text = await res.text();
+    return {
+      ...result,
+      title: extractTitle(text) || result.title,
+      summary: extractSummary(text) || result.summary,
+    };
+  } catch {
+    return result;
+  }
+}
+
+function parseExaText(text) {
+  const lines = String(text || '').split(/\r?\n/);
+  const result = { title: '', url: '', summary: '', published_at: null };
+  let inHighlights = false;
+  const highlights = [];
+
+  for (const line of lines) {
+    if (line.startsWith('Title:')) result.title = line.replace(/^Title:\s*/, '').trim();
+    else if (line.startsWith('URL:')) result.url = line.replace(/^URL:\s*/, '').trim();
+    else if (line.startsWith('Published:')) result.published_at = toIsoOrNull(line.replace(/^Published:\s*/, '').trim());
+    else if (line.startsWith('Highlights:')) {
+      inHighlights = true;
+      highlights.push(line.replace(/^Highlights:\s*/, '').trim());
+    } else if (inHighlights && line.trim()) {
+      highlights.push(line.trim());
+    }
+  }
+
+  result.summary = highlights.join(' ').slice(0, 700) || null;
+  return result;
+}
+
+function makeRow(keyword, item) {
+  const category = VALID_CATEGORIES.has(keyword.category) ? keyword.category : 'ai_business';
+  return {
+    keyword_id: keyword.id || null,
+    category,
+    source: String(item.source || 'agent_reach').slice(0, 120),
+    title: cleanText(item.title || item.url || 'Untitled').slice(0, 500),
+    url: normalizeUrl(item.url),
+    summary: item.summary ? cleanText(item.summary).slice(0, 1200) : null,
+    published_at: toIsoOrNull(item.published_at),
+  };
+}
+
+function makeFailureRow(keyword, source, url, message) {
+  return {
+    ...makeRow(keyword, {
+      source,
+      title: `[수집 실패] ${message}`,
+      url,
+      summary: message,
+      published_at: null,
+    }),
+    skip: true,
+  };
+}
+
+function dedupeRows(rows) {
+  const seen = new Set();
+  const result = [];
+  for (const row of rows) {
+    if (!row.url || !/^https?:\/\//i.test(row.url)) continue;
+    if (!row.title || row.title.length < 3) continue;
+    const key = row.url.replace(/#.*$/, '');
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(row);
+  }
+  return result;
+}
+
+async function upsertRawArticles(rows) {
+  const url = `${requiredEnv('SUPABASE_URL')}/rest/v1/raw_articles?on_conflict=url`;
+  for (const chunk of chunks(rows, 100)) {
+    await supabaseRequest(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Prefer: 'resolution=ignore-duplicates,return=minimal',
+      },
+      body: JSON.stringify(chunk),
+    });
+  }
+}
+
+async function touchKeywords(rows) {
+  const ids = [...new Set(rows.map((row) => row.keyword_id).filter(Boolean))];
+  const url = requiredEnv('SUPABASE_URL');
+  for (const id of ids) {
+    await supabaseRequest(`${url}/rest/v1/tracked_keywords?id=eq.${encodeURIComponent(id)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ last_article_at: new Date().toISOString() }),
+    });
+  }
+}
+
+async function supabaseRequest(url, options = {}) {
+  const key = requiredEnv('SUPABASE_SERVICE_ROLE_KEY');
+  const res = await fetchWithTimeout(url, timeoutMs, {
+    ...options,
+    headers: {
+      apikey: key,
+      Authorization: `Bearer ${key}`,
+      ...(options.headers || {}),
+    },
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`Supabase HTTP ${res.status}: ${text.slice(0, 500)}`);
+  }
+  if (res.status === 204) return null;
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
+}
+
+async function runCommand(command, commandArgs) {
+  return new Promise((resolve, reject) => {
+    const child = process.platform === 'win32'
+      ? spawn([command, ...commandArgs].map(quoteWindowsArg).join(' '), {
+        shell: true,
+        windowsHide: true,
+        env: process.env,
+      })
+      : spawn(command, commandArgs, {
+        shell: false,
+        windowsHide: true,
+        env: process.env,
+      });
+    let stdout = '';
+    let stderr = '';
+    const timer = setTimeout(() => {
+      child.kill();
+      reject(new Error(`${command} timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+
+    child.stdout.on('data', (chunk) => { stdout += chunk.toString(); });
+    child.stderr.on('data', (chunk) => { stderr += chunk.toString(); });
+    child.on('error', (err) => {
+      clearTimeout(timer);
+      reject(err);
+    });
+    child.on('close', (code) => {
+      clearTimeout(timer);
+      if (code === 0) resolve({ stdout, stderr });
+      else reject(new Error(`${command} exited ${code}: ${stderr || stdout}`.slice(0, 1200)));
+    });
+  });
+}
+
+function quoteWindowsArg(value) {
+  const text = String(value);
+  if (/^[A-Za-z0-9_./:=@-]+$/.test(text)) return text;
+  return `"${text.replace(/(["\\])/g, '\\$1')}"`;
+}
+
+async function fetchWithTimeout(url, ms, options = {}) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function parseFeeds(value) {
+  return splitList(value).map((entry) => {
+    const [name, url, category] = entry.split('|').map((part) => part.trim());
+    if (!url) return { name: hostName(name), url: name, category: null };
+    return { name: name || hostName(url), url, category: category || null };
+  }).filter((feed) => feed.url);
+}
+
+function buildSearchQuery(keyword) {
+  const context = {
+    ai_business: 'AI business automation agents enterprise latest',
+    startup: 'startup side business monetization Korea latest',
+    policy: 'Korea government support program SME startup policy latest',
+  }[keyword.category] || 'latest news';
+  return `${keyword.keyword} ${context}`.trim();
+}
+
+function normalizeKeyword(raw) {
+  return {
+    id: raw.id || null,
+    keyword: cleanText(raw.keyword || ''),
+    category: VALID_CATEGORIES.has(raw.category) ? raw.category : 'ai_business',
+  };
+}
+
+function parseArgs(argv) {
+  const out = {};
+  for (const arg of argv) {
+    if (!arg.startsWith('--')) continue;
+    const raw = arg.slice(2);
+    const eq = raw.indexOf('=');
+    if (eq === -1) out[raw] = 'true';
+    else out[raw.slice(0, eq)] = raw.slice(eq + 1);
+  }
+  return out;
+}
+
+function intArg(name, envValue, fallback) {
+  const value = args[name] ?? envValue;
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function boolArg(name, fallback) {
+  if (args[name] == null) return fallback;
+  return parseBool(args[name], fallback);
+}
+
+function parseBool(value, fallback) {
+  if (value == null || value === '') return fallback;
+  return ['1', 'true', 'yes', 'on'].includes(String(value).toLowerCase());
+}
+
+function splitList(value) {
+  return String(value || '')
+    .split(/[\n,;]/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function parseJson(value) {
+  try {
+    return JSON.parse(value);
+  } catch {
+    const match = String(value || '').match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
+    return match ? JSON.parse(match[1]) : null;
+  }
+}
+
+function parseJsonLines(value) {
+  return String(value || '')
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      try { return JSON.parse(line); } catch { return null; }
+    })
+    .filter(Boolean);
+}
+
+function chunks(items, size) {
+  const result = [];
+  for (let i = 0; i < items.length; i += size) result.push(items.slice(i, i + size));
+  return result;
+}
+
+function tag(block, name) {
+  const match = block.match(new RegExp(`<${name}\\b[^>]*>([\\s\\S]*?)<\\/${name}>`, 'i'));
+  return match ? match[1].trim() : '';
+}
+
+function attr(tagText, name) {
+  const match = tagText.match(new RegExp(`${name}=["']([^"']+)["']`, 'i'));
+  return match ? match[1] : '';
+}
+
+function decodeXml(value) {
+  return String(value || '')
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
+    .replace(/&quot;/g, '"')
+    .replace(/&amp;/g, '&')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .trim();
+}
+
+function stripTags(value) {
+  return String(value || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+function cleanText(value) {
+  return stripTags(decodeXml(value)).replace(/\s+/g, ' ').trim();
+}
+
+function normalizeUrl(value) {
+  const text = String(value || '').trim();
+  try {
+    const url = new URL(text);
+    url.hash = '';
+    return url.toString();
+  } catch {
+    return text;
+  }
+}
+
+function toIsoOrNull(value) {
+  if (!value) return null;
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d.toISOString();
+}
+
+function yyyymmddToIso(value) {
+  const text = String(value || '');
+  if (!/^\d{8}$/.test(text)) return null;
+  return toIsoOrNull(`${text.slice(0, 4)}-${text.slice(4, 6)}-${text.slice(6, 8)}T00:00:00Z`);
+}
+
+function extractTitle(text) {
+  const line = String(text || '').split(/\r?\n/).find((item) => /^Title:\s*/i.test(item) || /^#\s+/.test(item));
+  return line ? cleanText(line.replace(/^Title:\s*/i, '').replace(/^#+\s*/, '')) : '';
+}
+
+function extractSummary(text) {
+  return cleanText(String(text || '').replace(/https?:\/\/\S+/g, ' ')).slice(0, 700);
+}
+
+function hostName(url) {
+  try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return 'rss'; }
+}
+
+function requiredEnv(name) {
+  const value = process.env[name];
+  if (!value) throw new Error(`${name} 환경변수가 필요합니다.`);
+  return value;
+}

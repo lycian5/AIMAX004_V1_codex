@@ -4,7 +4,9 @@
   "private": true,
   "description": "Standalone policy article collector static UI for Vercel.",
   "scripts": {
-    "start": "python -m http.server 8080 -d docs"
+    "start": "python -m http.server 8080 -d docs",
+    "collect:agent-reach": "node scripts/agent-reach-collect.js",
+    "agent-reach:runner": "node scripts/agent-reach-runner.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",

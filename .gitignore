@@ -3,10 +3,12 @@ __pycache__/
 *.pyc
 .pytest_cache/
 .ruff_cache/
+.claude/
 .env
 node_modules/
 exports/*.json
 exports/*.jsonl
 exports/*.csv
 exports/*.md
-!exports/.gitkeep*.egg-info/
+!exports/.gitkeep
+*.egg-info/

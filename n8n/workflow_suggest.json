@@ -1,0 +1,296 @@
+{
+  "name": "COA NEWS — 소재 추천 (Suggest)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 7,
+              "triggerAtMinute": 0
+            }
+          ]
+        }
+      },
+      "id": "cron-trigger",
+      "name": "⏰ 매일 07:00 실행",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const config = {\n  supabaseUrl: $env.SUPABASE_URL || '여기에_SUPABASE_URL_입력',\n  supabaseKey: $env.SUPABASE_SERVICE_ROLE_KEY || '여기에_SERVICE_ROLE_KEY_입력',\n  anthropicApiKey: $env.ANTHROPIC_API_KEY || '여기에_ANTHROPIC_API_KEY_입력',\n  openaiApiKey: $env.OPENAI_API_KEY || '',\n  slackWebhookUrl: $env.SLACK_WEBHOOK_URL || '여기에_SLACK_WEBHOOK_URL_입력',\n  naverClientId: $env.NAVER_CLIENT_ID || '',\n  naverClientSecret: $env.NAVER_CLIENT_SECRET || '',\n  // Claude를 사용할지 OpenAI를 사용할지 선택\n  useClaudeApi: true,\n};\n\nreturn [{ json: config }];"
+      },
+      "id": "set-config",
+      "name": "⚙️ 설정 로드",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 300]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $json.supabaseUrl }}/rest/v1/raw_articles",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "select", "value": "category,title,url,keyword_id,summary,published_at" },
+            { "name": "collected_at", "value": "=gte.{{ new Date(Date.now() - 24*60*60*1000).toISOString() }}" },
+            { "name": "order", "value": "collected_at.desc" },
+            { "name": "limit", "value": "200" }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $json.supabaseKey }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $json.supabaseKey }}" }
+          ]
+        },
+        "options": {
+          "response": { "response": { "responseFormat": "json" } }
+        }
+      },
+      "id": "get-articles",
+      "name": "📰 최근 24시간 기사 조회",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const articles = $input.all().map(item => item.json);\n\n// 카테고리별 그룹핑\nconst CATEGORY_LABEL = {\n  ai_business: 'AI 비즈니스',\n  startup: '창업·부업',\n  policy: '정책·지원사업',\n};\n\nconst grouped = { ai_business: [], startup: [], policy: [] };\nfor (const a of articles) {\n  if (grouped[a.category]) {\n    grouped[a.category].push(a);\n  }\n}\n\n// 키워드별 기사 수 집계\nconst keywordCounts = {};\nfor (const [category, catArticles] of Object.entries(grouped)) {\n  keywordCounts[category] = {};\n  for (const a of catArticles) {\n    // keyword_id 기반으로 카운트 (실제 keyword 텍스트가 없으므로 제목 기반 분석)\n    const titleWords = a.title.split(/\\s+/).slice(0, 3).join(' ');\n    keywordCounts[category][titleWords] = (keywordCounts[category][titleWords] || 0) + 1;\n  }\n}\n\n// 카테고리별 요약 생성\nconst summaryParts = Object.entries(grouped).map(([category, catArticles]) => {\n  const label = CATEGORY_LABEL[category] || category;\n  const headlines = catArticles\n    .slice(0, 10)\n    .map(a => `- ${a.title}`)\n    .join('\\n') || '(수집된 기사 없음)';\n  \n  // 상위 키워드 추출 (제목 빈도 기반)\n  const topKeywords = Object.entries(keywordCounts[category] || {})\n    .sort((a, b) => b[1] - a[1])\n    .slice(0, 5)\n    .map(([kw, count]) => `${kw}: 기사 ${count}건`)\n    .join('\\n') || '(분석 대상 키워드 없음)';\n\n  return `## ${label}\\n[주요 키워드]\\n${topKeywords}\\n[최근 헤드라인]\\n${headlines}`;\n}).join('\\n\\n');\n\nreturn [{\n  json: {\n    summary: summaryParts,\n    totalArticles: articles.length,\n    byCategory: {\n      ai_business: grouped.ai_business.length,\n      startup: grouped.startup.length,\n      policy: grouped.policy.length,\n    }\n  }\n}];"
+      },
+      "id": "group-and-summarize",
+      "name": "📊 카테고리 분석 + 요약",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [660, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "const config = $('⚙️ 설정 로드').first().json;\nconst analysis = $input.first().json;\n\nconst systemPrompt = `당신은 코아뉴스의 편집 데스크 보조입니다. 코아뉴스는 다음 4개 섹션을 운영합니다:\n- AI 비즈니스: 최신 AI 기술·활용 사례·업무 자동화\n- 창업·부업: 창업 트렌드, 온라인 수익화, 1인 기업 실전 정보\n- 정책·지원사업: 정부·공공기관 지원사업을 쉽게 풀어주는 실용 정보\n- 칼럼·인터뷰: 현장 경험과 전문가 분석 기반의 심층 시각, 전문가·당사자 인터뷰\n\n다음 기준으로 소재를 제안하세요:\n- AI 비즈니스 2건, 창업·부업 2건, 정책·지원사업 2건\n- 칼럼 1건: 지속되는 주요 키워드에서 선정\n- 인터뷰 1건: 새롭게 떠오르는 키워드 또는 당사자가 명확한 이슈에서 선정하고, 섭외할 인터뷰이 유형을 interviewee 필드에 구체적으로 제안 (예: \"AI 도입 중소기업 대표\")\n- 반드시 8건을 제안\n\n응답은 반드시 다음 JSON 형식으로 해주세요:\n{\n  \"suggestions\": [\n    {\n      \"category\": \"ai_business|startup|policy|column\",\n      \"format\": \"article|column|interview\",\n      \"title\": \"제안 기사 제목\",\n      \"angle\": \"기사 각도/관점 설명\",\n      \"keywords\": [\"키워드1\", \"키워드2\"],\n      \"reference_headlines\": [\"참고한 헤드라인1\"],\n      \"quadrant\": \"blue_ocean|hot|media_led|null\",\n      \"interviewee\": \"섭외 대상 또는 null\"\n    }\n  ]\n}`;\n\nconst userMessage = `[오늘의 카테고리별 키워드 분석]\\n\\n${analysis.summary}\\n\\n총 수집 기사: ${analysis.totalArticles}건 (AI ${analysis.byCategory.ai_business}건, 창업 ${analysis.byCategory.startup}건, 정책 ${analysis.byCategory.policy}건)`;\n\nreturn [{\n  json: {\n    systemPrompt,\n    userMessage,\n    useClaudeApi: config.useClaudeApi,\n    anthropicApiKey: config.anthropicApiKey,\n    openaiApiKey: config.openaiApiKey,\n  }\n}];"
+      },
+      "id": "build-prompt",
+      "name": "✏️ AI 프롬프트 구성",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.useClaudeApi }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "if-claude",
+      "name": "🔀 Claude vs OpenAI",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1100, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{ $('✏️ AI 프롬프트 구성').first().json.anthropicApiKey }}" },
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"claude-sonnet-4-20250514\",\n  \"max_tokens\": 4096,\n  \"system\": {{ JSON.stringify($('✏️ AI 프롬프트 구성').first().json.systemPrompt) }},\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": {{ JSON.stringify($('✏️ AI 프롬프트 구성').first().json.userMessage) }}\n    }\n  ]\n}",
+        "options": {
+          "response": { "response": { "responseFormat": "json" } },
+          "timeout": 60000
+        }
+      },
+      "id": "claude-api",
+      "name": "🤖 Claude API 호출",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1320, 180]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Authorization", "value": "=Bearer {{ $('✏️ AI 프롬프트 구성').first().json.openaiApiKey }}" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"gpt-4o\",\n  \"messages\": [\n    { \"role\": \"system\", \"content\": {{ JSON.stringify($('✏️ AI 프롬프트 구성').first().json.systemPrompt) }} },\n    { \"role\": \"user\", \"content\": {{ JSON.stringify($('✏️ AI 프롬프트 구성').first().json.userMessage) }} }\n  ],\n  \"response_format\": { \"type\": \"json_object\" }\n}",
+        "options": {
+          "response": { "response": { "responseFormat": "json" } },
+          "timeout": 60000
+        }
+      },
+      "id": "openai-api",
+      "name": "🧠 OpenAI API 호출",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1320, 420]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Claude 또는 OpenAI 응답 파싱\nconst input = $input.first().json;\nlet suggestions = [];\n\ntry {\n  let content;\n  \n  // Claude 응답 형식\n  if (input.content && Array.isArray(input.content)) {\n    content = input.content\n      .filter(c => c.type === 'text')\n      .map(c => c.text)\n      .join('');\n  }\n  // OpenAI 응답 형식\n  else if (input.choices) {\n    content = input.choices[0]?.message?.content || '';\n  }\n  // 직접 전달된 경우\n  else if (typeof input === 'string') {\n    content = input;\n  } else {\n    content = JSON.stringify(input);\n  }\n\n  // JSON 블록 추출 (```json ... ``` 또는 직접 JSON)\n  const jsonMatch = content.match(/```json\\s*([\\s\\S]*?)```/) || \n                    content.match(/\\{[\\s\\S]*\"suggestions\"[\\s\\S]*\\}/);\n  const jsonStr = jsonMatch ? (jsonMatch[1] || jsonMatch[0]) : content;\n  \n  const parsed = JSON.parse(jsonStr);\n  suggestions = parsed.suggestions || [];\n\n  // 각 제안 항목 검증/정규화\n  suggestions = suggestions.map(s => ({\n    category: s.category || 'ai_business',\n    format: s.format || 'article',\n    title: s.title || '제목 없음',\n    angle: s.angle || '',\n    keywords: Array.isArray(s.keywords) ? s.keywords : [],\n    reference_headlines: Array.isArray(s.reference_headlines) ? s.reference_headlines : [],\n    quadrant: s.quadrant || null,\n    interviewee: s.interviewee || null,\n  }));\n\n} catch (err) {\n  // 파싱 실패 시 빈 배열\n  suggestions = [{\n    category: 'ai_business',\n    format: 'article',\n    title: '[파싱 실패] AI 응답을 처리할 수 없습니다',\n    angle: `Error: ${err.message}`,\n    keywords: [],\n    reference_headlines: [],\n    quadrant: null,\n    interviewee: null,\n  }];\n}\n\nreturn suggestions.map(s => ({ json: s }));"
+      },
+      "id": "parse-ai-response",
+      "name": "📝 AI 응답 파싱",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1540, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('⚙️ 설정 로드').first().json.supabaseUrl }}/rest/v1/topic_suggestions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $('⚙️ 설정 로드').first().json.supabaseKey }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $('⚙️ 설정 로드').first().json.supabaseKey }}" },
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Prefer", "value": "return=minimal" }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            { "name": "category", "value": "={{ $json.category }}" },
+            { "name": "format", "value": "={{ $json.format }}" },
+            { "name": "title", "value": "={{ $json.title }}" },
+            { "name": "angle", "value": "={{ $json.angle }}" },
+            { "name": "keywords", "value": "={{ JSON.stringify($json.keywords) }}" },
+            { "name": "reference_headlines", "value": "={{ JSON.stringify($json.reference_headlines) }}" },
+            { "name": "quadrant", "value": "={{ $json.quadrant }}" },
+            { "name": "interviewee", "value": "={{ $json.interviewee }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "save-suggestions",
+      "name": "💾 추천 결과 Supabase 저장",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1760, 300],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Slack 브리핑 메시지 생성\nconst suggestions = $input.all().map(item => item.json);\nconst config = $('⚙️ 설정 로드').first().json;\n\nconst emoji = { article: '📰', column: '✍️', interview: '🎙' };\nconst lines = ['*🗞 코아뉴스 오늘의 소재 브리핑*', ''];\n\nif (!suggestions.length) {\n  lines.push('오늘은 제안할 소재가 없습니다 (수집된 기사 부족).');\n} else {\n  suggestions.forEach((s, i) => {\n    lines.push(`${i + 1}. ${emoji[s.format] || '📌'} *${s.title}*`);\n    if (s.angle) lines.push(`   _${s.angle}_`);\n    if (s.interviewee) lines.push(`   섭외 대상: ${s.interviewee}`);\n    if (s.keywords?.length) lines.push(`   키워드: ${s.keywords.join(', ')}`);\n    lines.push('');\n  });\n}\n\nreturn [{\n  json: {\n    slackWebhookUrl: config.slackWebhookUrl,\n    text: lines.join('\\n'),\n    suggestionsCount: suggestions.length,\n  }\n}];"
+      },
+      "id": "format-slack",
+      "name": "💬 Slack 메시지 구성",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1980, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.slackWebhookUrl }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"text\": {{ JSON.stringify($json.text) }} }",
+        "options": {}
+      },
+      "id": "send-slack",
+      "name": "📨 Slack 알림 전송",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2200, 300],
+      "continueOnFail": true
+    }
+  ],
+  "connections": {
+    "⏰ 매일 07:00 실행": {
+      "main": [
+        [{ "node": "⚙️ 설정 로드", "type": "main", "index": 0 }]
+      ]
+    },
+    "⚙️ 설정 로드": {
+      "main": [
+        [{ "node": "📰 최근 24시간 기사 조회", "type": "main", "index": 0 }]
+      ]
+    },
+    "📰 최근 24시간 기사 조회": {
+      "main": [
+        [{ "node": "📊 카테고리 분석 + 요약", "type": "main", "index": 0 }]
+      ]
+    },
+    "📊 카테고리 분석 + 요약": {
+      "main": [
+        [{ "node": "✏️ AI 프롬프트 구성", "type": "main", "index": 0 }]
+      ]
+    },
+    "✏️ AI 프롬프트 구성": {
+      "main": [
+        [{ "node": "🔀 Claude vs OpenAI", "type": "main", "index": 0 }]
+      ]
+    },
+    "🔀 Claude vs OpenAI": {
+      "main": [
+        [{ "node": "🤖 Claude API 호출", "type": "main", "index": 0 }],
+        [{ "node": "🧠 OpenAI API 호출", "type": "main", "index": 0 }]
+      ]
+    },
+    "🤖 Claude API 호출": {
+      "main": [
+        [{ "node": "📝 AI 응답 파싱", "type": "main", "index": 0 }]
+      ]
+    },
+    "🧠 OpenAI API 호출": {
+      "main": [
+        [{ "node": "📝 AI 응답 파싱", "type": "main", "index": 0 }]
+      ]
+    },
+    "📝 AI 응답 파싱": {
+      "main": [
+        [{ "node": "💾 추천 결과 Supabase 저장", "type": "main", "index": 0 }]
+      ]
+    },
+    "💾 추천 결과 Supabase 저장": {
+      "main": [
+        [{ "node": "💬 Slack 메시지 구성", "type": "main", "index": 0 }]
+      ]
+    },
+    "💬 Slack 메시지 구성": {
+      "main": [
+        [{ "node": "📨 Slack 알림 전송", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "saveManualExecutions": true,
+    "callerPolicy": "workflowsFromSameOwner",
+    "timezone": "Asia/Seoul"
+  },
+  "staticData": null,
+  "tags": [
+    { "name": "coa-news" },
+    { "name": "suggest" }
+  ]
+}
