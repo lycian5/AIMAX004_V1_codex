@@ -1,0 +1,10 @@
+[Unit]
+Description=Run COA NEWS n8n backup daily
+
+[Timer]
+OnCalendar=*-*-* 02:10:00 Asia/Seoul
+Persistent=true
+RandomizedDelaySec=10m
+
+[Install]
+WantedBy=timers.target

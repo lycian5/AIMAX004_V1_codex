@@ -1,0 +1,17 @@
+[Unit]
+Description=COA NEWS Agent Reach Runner
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/n8n
+EnvironmentFile=/opt/n8n/.env
+Environment=PATH=/root/.agent-reach-venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStart=/usr/bin/node /opt/n8n/scripts/agent-reach-runner.js
+Restart=always
+RestartSec=5
+User=root
+
+[Install]
+WantedBy=multi-user.target

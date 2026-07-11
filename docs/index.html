@@ -230,6 +230,9 @@
     .card-summary { font-size:13px; color:var(--ink2); line-height:1.6; margin-bottom:9px; }
     .card-url     { display:inline-flex; align-items:center; gap:5px; font-size:12px; color:var(--accent2); text-decoration:none; word-break:break-all; }
     .card-url:hover { text-decoration:underline; }
+    .card-actions { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:10px; }
+    .draft-btn { background:rgba(20,184,166,.12); color:#5eead4; border:1px solid rgba(20,184,166,.35); }
+    .draft-btn:hover { background:rgba(20,184,166,.2); border-color:var(--teal); }
 
     .card-scores { display:flex; flex-direction:column; align-items:flex-end; gap:7px; flex-shrink:0; }
     .final-score { font-size:26px; font-weight:900; letter-spacing:-1px; line-height:1; }
@@ -296,6 +299,7 @@
       </div>
     </div>
     <div class="hero-actions">
+      <button class="btn btn-ghost btn-sm" id="hNewDraft">기사 초안</button>
       <button class="btn btn-ghost btn-sm" id="hExportXlsx">📊 엑셀</button>
       <button class="btn btn-ghost btn-sm" id="hExportCsv">📋 CSV</button>
       <button class="btn btn-ghost btn-sm" id="hExportMd">📝 소재목록</button>
@@ -627,6 +631,7 @@ let activeTab   = 'keyword';
   $('btnCollect').onclick = startCollect;
   $('btnStop').onclick    = () => { stopFlag = true; };
   $('btnClear').onclick   = clearAll;
+  $('hNewDraft').onclick  = () => openDraftEditor();
 
   // exports
   ['hExportXlsx','bExportXlsx'].forEach(id => $(id).onclick = exportXlsx);
@@ -960,7 +965,10 @@ function renderCards() {
         </div>
         <div class="card-title">${escHtml(a.title)}</div>
         <div class="card-summary">${escHtml(a.summary)}</div>
-        <a class="card-url" href="${escHtml(a.url)}" target="_blank" rel="noopener">🔗 ${escHtml(a.url.length > 80 ? a.url.slice(0,80)+'...' : a.url)}</a>
+        <div class="card-actions">
+          <a class="card-url" href="${escHtml(a.url)}" target="_blank" rel="noopener">🔗 ${escHtml(a.url.length > 80 ? a.url.slice(0,80)+'...' : a.url)}</a>
+          <button class="btn btn-sm draft-btn" type="button" data-draft-url="${escHtml(a.url)}">코아뉴스 초안</button>
+        </div>
       </div>
       <div class="card-scores">
         <div><div class="final-score ${scCls}">${a.final}</div><div class="score-label">최종점수</div></div>
@@ -968,6 +976,29 @@ function renderCards() {
       </div>
     </article>`;
   }).join('');
+
+  document.querySelectorAll('.draft-btn').forEach(btn => {
+    btn.onclick = () => {
+      const article = allArticles.find(item => item.url === btn.dataset.draftUrl);
+      openDraftEditor(article || null);
+    };
+  });
+}
+
+function openDraftEditor(article = null) {
+  if (article) {
+    localStorage.setItem('coa_news_draft_seed', JSON.stringify({
+      category: article.category,
+      title: article.title,
+      summary: article.summary,
+      source_name: article.source_name,
+      source_url: article.url,
+      fetched_at: article.fetched_at,
+    }));
+  } else {
+    localStorage.removeItem('coa_news_draft_seed');
+  }
+  window.open('coanews-draft.html', '_blank', 'noopener');
 }
 
 function renderStats() {

@@ -1,0 +1,706 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>COA NEWS 기사 초안 준비</title>
+  <meta name="description" content="코아뉴스 뉴스등록 후 편집장 승인대기로 저장할 기사 자료를 준비합니다." />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <style>
+    :root {
+      --bg:#f4f6f8;
+      --surface:#fff;
+      --ink:#17202a;
+      --muted:#64748b;
+      --line:#dce2e8;
+      --accent:#087ea4;
+      --accent-dark:#05617f;
+      --good:#0f766e;
+      --warn:#b45309;
+      --danger:#b91c1c;
+      --radius:6px;
+    }
+    * { box-sizing:border-box; }
+    body { margin:0; background:var(--bg); color:var(--ink); font-family:Pretendard,"Noto Sans KR",Arial,sans-serif; font-size:14px; }
+    button,input,select,textarea { font:inherit; }
+    button { cursor:pointer; }
+    .topbar { position:sticky; top:0; z-index:20; background:#fff; border-bottom:1px solid var(--line); }
+    .topbar-inner { max-width:1280px; margin:0 auto; min-height:64px; padding:10px 24px; display:flex; align-items:center; justify-content:space-between; gap:16px; }
+    .brand h1 { margin:0; font-size:19px; }
+    .brand p { margin:3px 0 0; color:var(--muted); font-size:12px; }
+    .status { display:inline-flex; align-items:center; gap:7px; color:var(--good); font-size:12px; font-weight:700; }
+    .status::before { content:""; width:8px; height:8px; border-radius:50%; background:var(--good); }
+    .layout { max-width:1280px; margin:0 auto; padding:20px 24px 56px; display:grid; grid-template-columns:minmax(0,1fr) 320px; gap:18px; align-items:start; }
+    .workspace,.side { background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); }
+    .section { padding:20px; border-bottom:1px solid var(--line); }
+    .section:last-child { border-bottom:0; }
+    .section-head { display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-bottom:14px; }
+    .section-head h2 { margin:0; font-size:15px; }
+    .section-head span { color:var(--muted); font-size:11px; }
+    .grid { display:grid; gap:12px; }
+    .grid-2 { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .grid-3 { grid-template-columns:repeat(3,minmax(0,1fr)); }
+    .field { display:flex; flex-direction:column; gap:6px; min-width:0; }
+    .field label { color:#475569; font-size:12px; font-weight:700; }
+    .field input,.field select,.field textarea {
+      width:100%; border:1px solid #cbd5e1; border-radius:5px; background:#fff; color:var(--ink); padding:9px 10px; outline:none;
+    }
+    .field input,.field select { min-height:39px; }
+    .field textarea { resize:vertical; min-height:76px; line-height:1.55; }
+    .field input:focus,.field select:focus,.field textarea:focus { border-color:var(--accent); box-shadow:0 0 0 2px rgba(8,126,164,.12); }
+    .field .hint { color:var(--muted); font-size:11px; line-height:1.45; }
+    .body-editor { min-height:410px !important; font-family:"Noto Sans KR",Arial,sans-serif; }
+    .source-strip { padding:10px 12px; border:1px solid #bae6fd; background:#f0f9ff; border-radius:5px; font-size:12px; color:#0c4a6e; margin-bottom:14px; overflow-wrap:anywhere; }
+    .source-strip strong { display:block; color:#075985; margin-bottom:3px; }
+    .toggle-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+    .toggle { border:1px solid var(--line); border-radius:5px; padding:9px 10px; display:flex; align-items:center; justify-content:space-between; gap:8px; }
+    .toggle label { font-size:12px; font-weight:700; }
+    .toggle input { width:17px; height:17px; accent-color:var(--accent); }
+    .fixed-state { border:1px solid #a7f3d0; background:#ecfdf5; color:#065f46; padding:10px 12px; border-radius:5px; font-size:12px; font-weight:700; }
+    .canvas-wrap { background:#e5e7eb; border:1px solid #cbd5e1; border-radius:5px; overflow:hidden; aspect-ratio:2/1; display:flex; align-items:center; justify-content:center; }
+    canvas { display:block; width:100%; height:100%; object-fit:contain; }
+    .image-note { margin-top:8px; padding:9px 10px; border-radius:5px; background:#fff7ed; color:#9a3412; font-size:11px; line-height:1.45; }
+    .preview { border:1px solid var(--line); border-radius:5px; min-height:220px; padding:18px; background:#fff; line-height:1.75; overflow-wrap:anywhere; }
+    .preview h2,.preview h3 { line-height:1.35; }
+    .preview img { max-width:100%; height:auto; }
+    .actions { display:flex; flex-wrap:wrap; gap:8px; }
+    .btn { min-height:38px; border:1px solid transparent; border-radius:5px; padding:8px 13px; font-weight:700; font-size:12px; background:#fff; }
+    .btn-primary { background:var(--accent); color:#fff; }
+    .btn-primary:hover { background:var(--accent-dark); }
+    .btn-outline { border-color:#cbd5e1; color:#334155; }
+    .btn-outline:hover { border-color:var(--accent); color:var(--accent); }
+    .btn-danger { border-color:#fecaca; color:var(--danger); }
+    .side { position:sticky; top:82px; }
+    .side-section { padding:16px; border-bottom:1px solid var(--line); }
+    .side-section:last-child { border-bottom:0; }
+    .side h2 { font-size:14px; margin:0 0 12px; }
+    .checklist { list-style:none; margin:0; padding:0; display:grid; gap:9px; }
+    .checklist li { display:flex; gap:8px; align-items:flex-start; color:#475569; font-size:12px; line-height:1.45; }
+    .checklist li::before { content:""; width:7px; height:7px; margin-top:5px; border-radius:50%; background:#94a3b8; flex:0 0 auto; }
+    .checklist li.ok::before { background:var(--good); }
+    .checklist li.warn::before { background:#f59e0b; }
+    .notice { background:#fffbeb; border:1px solid #fde68a; color:#854d0e; border-radius:5px; padding:11px; font-size:11px; line-height:1.55; }
+    .copy-row { display:grid; grid-template-columns:1fr 1fr; gap:7px; }
+    .toast { position:fixed; right:20px; bottom:20px; z-index:50; max-width:360px; padding:11px 14px; border-radius:5px; background:#17202a; color:#fff; box-shadow:0 8px 30px rgba(0,0,0,.22); opacity:0; transform:translateY(8px); pointer-events:none; transition:.18s; }
+    .toast.show { opacity:1; transform:translateY(0); }
+    .toast.error { background:#991b1b; }
+    @media (max-width:900px) {
+      .layout { grid-template-columns:1fr; padding:14px; }
+      .side { position:static; }
+      .topbar-inner { padding:10px 14px; }
+    }
+    @media (max-width:640px) {
+      .grid-2,.grid-3,.toggle-grid { grid-template-columns:1fr; }
+      .section { padding:16px; }
+      .copy-row { grid-template-columns:1fr; }
+      .topbar-inner { align-items:flex-start; flex-direction:column; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <h1>COA NEWS 기사 초안 준비</h1>
+        <p>관리자 기사등록 화면으로 옮겨 뉴스등록할 기사 자료를 만듭니다.</p>
+      </div>
+      <span class="status">뉴스등록 후 편집장 승인대기</span>
+    </div>
+  </header>
+
+  <main class="layout">
+    <form class="workspace" id="draftForm" novalidate>
+      <section class="section">
+        <div class="section-head"><h2>기사 분류</h2><span>실제 내부 ID는 플랫폼 업체와 최종 확인 필요</span></div>
+        <div class="source-strip" id="seedInfo" hidden></div>
+        <div class="grid grid-3">
+          <div class="field">
+            <label for="category">기본 카테고리</label>
+            <select id="category" required></select>
+          </div>
+          <div class="field">
+            <label for="additionalCategory1">동시노출 카테고리 1</label>
+            <select id="additionalCategory1"></select>
+          </div>
+          <div class="field">
+            <label for="additionalCategory2">동시노출 카테고리 2</label>
+            <select id="additionalCategory2"></select>
+          </div>
+        </div>
+        <div class="grid grid-2" style="margin-top:12px;">
+          <div class="field">
+            <label for="reporterEmail">기자 이메일</label>
+            <input id="reporterEmail" type="email" placeholder="플랫폼에 등록된 기자 이메일" />
+          </div>
+          <div class="field">
+            <label for="scheduledAt">예약일시</label>
+            <input id="scheduledAt" type="datetime-local" />
+            <span class="hint">비워두면 예약 사용안함으로 내보냅니다.</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-head"><h2>제목</h2><span>플랫폼 허용 특수문자 기준으로 최종 확인</span></div>
+        <div class="field">
+          <label for="title">기사 제목</label>
+          <input id="title" type="text" maxlength="180" required placeholder="기사 제목을 입력하세요" />
+        </div>
+        <div class="grid grid-3" style="margin-top:12px;">
+          <div class="field"><label for="subtitle1">서브제목 1</label><input id="subtitle1" type="text" maxlength="180" /></div>
+          <div class="field"><label for="subtitle2">서브제목 2</label><input id="subtitle2" type="text" maxlength="180" /></div>
+          <div class="field"><label for="subtitle3">서브제목 3</label><input id="subtitle3" type="text" maxlength="180" /></div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-head"><h2>본문</h2><span>HTML 또는 일반 텍스트 입력 가능</span></div>
+        <div class="field">
+          <label for="bodyHtml">기사 본문</label>
+          <textarea id="bodyHtml" class="body-editor" required placeholder="완성된 기사 본문을 입력하세요. 일반 텍스트는 문단 HTML로 자동 변환됩니다."></textarea>
+          <span class="hint">script, iframe, form 등 위험 요소는 패키지 생성 시 제거됩니다.</span>
+        </div>
+        <div class="actions" style="margin-top:10px;">
+          <button class="btn btn-outline" type="button" id="previewButton">본문 미리보기</button>
+          <button class="btn btn-outline" type="button" id="copyBodyButton">편집기용 본문 복사</button>
+        </div>
+        <div class="preview" id="bodyPreview" style="margin-top:12px;" hidden></div>
+      </section>
+
+      <section class="section">
+        <div class="section-head"><h2>대표 이미지</h2><span>권장 규격 800 × 400 JPG/PNG</span></div>
+        <div class="grid grid-2">
+          <div>
+            <div class="field">
+              <label for="thumbnailInput">이미지 파일</label>
+              <input id="thumbnailInput" type="file" accept="image/jpeg,image/png" />
+            </div>
+            <div class="grid grid-2" style="margin-top:12px;">
+              <div class="field">
+                <label for="imageMode">맞춤 방식</label>
+                <select id="imageMode">
+                  <option value="cover">화면 채우기 · 가장자리 크롭</option>
+                  <option value="contain">전체 표시 · 여백 허용</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="imageBackground">여백 색상</label>
+                <select id="imageBackground">
+                  <option value="#ffffff">흰색</option>
+                  <option value="#111827">검정</option>
+                  <option value="#e5e7eb">연한 회색</option>
+                </select>
+              </div>
+            </div>
+            <div class="image-note" id="imageNote">이미지를 선택하면 800×400 미리보기를 생성합니다. 원본 저작권과 출처를 반드시 확인하세요.</div>
+          </div>
+          <div class="canvas-wrap"><canvas id="thumbnailCanvas" width="800" height="400"></canvas></div>
+        </div>
+        <div class="grid grid-3" style="margin-top:12px;">
+          <div class="field"><label for="thumbnailAlt">대체 텍스트</label><input id="thumbnailAlt" type="text" placeholder="이미지 내용을 설명" /></div>
+          <div class="field"><label for="thumbnailCaption">사진 설명</label><input id="thumbnailCaption" type="text" /></div>
+          <div class="field"><label for="thumbnailSource">이미지 출처</label><input id="thumbnailSource" type="text" placeholder="예: 코아뉴스, 기관명" /></div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="section-head"><h2>등록 옵션</h2><span>안전한 기본값 적용</span></div>
+        <div class="grid grid-2">
+          <div class="field">
+            <label for="tags">태그</label>
+            <input id="tags" type="text" placeholder="AI, 소상공인, 정책자금" />
+            <span class="hint">쉼표로 구분합니다.</span>
+          </div>
+          <div class="field">
+            <label for="sourceUrl">참고자료 URL</label>
+            <input id="sourceUrl" type="url" placeholder="https://" />
+          </div>
+        </div>
+        <div class="toggle-grid" style="margin-top:12px;">
+          <div class="toggle"><label for="commentsEnabled">댓글 허용</label><input id="commentsEnabled" type="checkbox" /></div>
+          <div class="toggle"><label for="showOnMain">메인 노출</label><input id="showOnMain" type="checkbox" /></div>
+          <div class="toggle"><label for="showAsHeadline">헤드라인 노출</label><input id="showAsHeadline" type="checkbox" /></div>
+          <div class="toggle"><label for="articleAd">기사형 광고</label><input id="articleAd" type="checkbox" /></div>
+          <div class="toggle"><label for="shareNews">공유뉴스</label><input id="shareNews" type="checkbox" /></div>
+          <div class="toggle"><label for="shareConsent">공유약관 동의</label><input id="shareConsent" type="checkbox" /></div>
+        </div>
+        <div class="fixed-state" style="margin-top:12px;">등록 목표 상태: pending_editor_approval · 뉴스등록 완료 · 편집장 승인대기</div>
+      </section>
+    </form>
+
+    <aside class="side">
+      <section class="side-section">
+        <h2>등록 전 점검</h2>
+        <ul class="checklist" id="checklist">
+          <li id="checkTitle">제목 입력</li>
+          <li id="checkBody">본문 200자 이상</li>
+          <li id="checkCategory">기본 카테고리 선택</li>
+          <li id="checkReporter">기자 이메일 확인</li>
+          <li id="checkImage">대표 이미지 확인</li>
+          <li id="checkSource">참고자료·출처 확인</li>
+        </ul>
+      </section>
+      <section class="side-section">
+        <h2>빠른 복사</h2>
+        <div class="copy-row">
+          <button class="btn btn-outline" type="button" id="copyTitleButton">제목 복사</button>
+          <button class="btn btn-outline" type="button" id="copySubtitleButton">부제목 복사</button>
+          <button class="btn btn-outline" type="button" id="copyTagsButton">태그 복사</button>
+          <button class="btn btn-outline" type="button" id="copySourceButton">출처 URL 복사</button>
+        </div>
+      </section>
+      <section class="side-section">
+        <h2>수동등록 패키지</h2>
+        <div class="actions">
+          <button class="btn btn-primary" type="button" id="downloadZipButton">ZIP 패키지</button>
+          <button class="btn btn-outline" type="button" id="downloadJsonButton">JSON</button>
+          <button class="btn btn-outline" type="button" id="downloadHtmlButton">본문 HTML</button>
+          <button class="btn btn-outline" type="button" id="downloadImageButton">대표 이미지</button>
+        </div>
+      </section>
+      <section class="side-section">
+        <div class="notice">
+          이 화면은 코아뉴스 관리자 페이지에 자동 로그인하거나 기사를 발행하지 않습니다. 내려받은 자료를 검토한 뒤 관리자 기사등록 화면에 수동으로 입력하세요.
+        </div>
+        <button class="btn btn-danger" type="button" id="resetButton" style="width:100%;margin-top:10px;">작성 내용 초기화</button>
+      </section>
+    </aside>
+  </main>
+
+  <div class="toast" id="toast" role="status"></div>
+
+  <script>
+    const CATEGORIES = [
+      { id:'11', name:'통합뉴스' },
+      { id:'13', name:'AI 비지니스' },
+      { id:'15', name:'창업 / 부업' },
+      { id:'14', name:'현장 칼럼' },
+      { id:'14/26', name:'칼럼' },
+      { id:'16', name:'AI / 테크' },
+      { id:'17', name:'소상공인 경제' },
+      { id:'12', name:'지역 상권' },
+      { id:'18', name:'마케팅 / 유통' },
+      { id:'25', name:'커뮤니티' },
+    ];
+    const CATEGORY_DEFAULTS = { ai:'13', startup:'15', policy:'17', column:'14/26' };
+    const FORM_KEY = 'coa_news_draft_form_v1';
+    const SEED_KEY = 'coa_news_draft_seed';
+    const fieldIds = [
+      'category','additionalCategory1','additionalCategory2','reporterEmail','scheduledAt','title',
+      'subtitle1','subtitle2','subtitle3','bodyHtml','thumbnailAlt','thumbnailCaption','thumbnailSource',
+      'tags','sourceUrl','commentsEnabled','showOnMain','showAsHeadline','articleAd','shareNews','shareConsent',
+      'imageMode','imageBackground'
+    ];
+    let sourceImage = null;
+    let toastTimer = null;
+
+    function $(id) { return document.getElementById(id); }
+
+    function buildCategoryOptions() {
+      const options = CATEGORIES.map(item => `<option value="${item.id}">${item.name} (${item.id})</option>`).join('');
+      $('category').innerHTML = options;
+      $('additionalCategory1').innerHTML = `<option value="">사용안함</option>${options}`;
+      $('additionalCategory2').innerHTML = `<option value="">사용안함</option>${options}`;
+    }
+
+    function readFields() {
+      const data = {};
+      fieldIds.forEach(id => {
+        const el = $(id);
+        data[id] = el.type === 'checkbox' ? el.checked : el.value;
+      });
+      return data;
+    }
+
+    function applyFields(data) {
+      if (!data) return;
+      fieldIds.forEach(id => {
+        if (!(id in data)) return;
+        const el = $(id);
+        if (el.type === 'checkbox') el.checked = Boolean(data[id]);
+        else el.value = data[id] ?? '';
+      });
+    }
+
+    function defaultFields() {
+      return {
+        category:'11', additionalCategory1:'', additionalCategory2:'', reporterEmail:'', scheduledAt:'',
+        title:'', subtitle1:'', subtitle2:'', subtitle3:'', bodyHtml:'', thumbnailAlt:'', thumbnailCaption:'',
+        thumbnailSource:'', tags:'', sourceUrl:'', commentsEnabled:false, showOnMain:false, showAsHeadline:false,
+        articleAd:false, shareNews:false, shareConsent:false, imageMode:'cover', imageBackground:'#ffffff'
+      };
+    }
+
+    function applySeed(seed) {
+      const defaults = defaultFields();
+      defaults.category = CATEGORY_DEFAULTS[seed.category] || '11';
+      defaults.additionalCategory1 = seed.category === 'ai' ? '16' : '';
+      defaults.title = seed.title || '';
+      defaults.sourceUrl = seed.source_url || '';
+      defaults.bodyHtml = seed.summary
+        ? `${escapeHtml(seed.summary)}\n\n참고자료: ${seed.source_url || ''}`
+        : '';
+      defaults.tags = categoryTags(seed.category);
+      applyFields(defaults);
+      $('seedInfo').hidden = false;
+      $('seedInfo').innerHTML = `<strong>선택한 수집 소재</strong>${escapeHtml(seed.source_name || '')} · ${escapeHtml(seed.source_url || '')}<br>수집 요약을 초안 시작점으로 가져왔습니다. 완성 본문으로 반드시 다시 작성하고 검증하세요.`;
+    }
+
+    function categoryTags(category) {
+      return { ai:'AI, AI비즈니스', startup:'창업, 부업', policy:'소상공인, 정책지원', column:'칼럼, 인사이트' }[category] || '';
+    }
+
+    function getCategory(id) {
+      return CATEGORIES.find(item => item.id === id) || null;
+    }
+
+    function getBodyHtml() {
+      const value = $('bodyHtml').value.trim();
+      if (!value) return '';
+      const looksLikeHtml = /<([a-z][^>]*)>/i.test(value);
+      return sanitizeHtml(looksLikeHtml ? value : textToHtml(value));
+    }
+
+    function textToHtml(value) {
+      const lines = value.replace(/\r/g, '').split('\n');
+      const out = [];
+      let list = [];
+      function flushList() {
+        if (!list.length) return;
+        out.push(`<ul>${list.map(item => `<li>${escapeHtml(item)}</li>`).join('')}</ul>`);
+        list = [];
+      }
+      lines.forEach(line => {
+        const text = line.trim();
+        if (!text) { flushList(); return; }
+        if (/^###\s+/.test(text)) { flushList(); out.push(`<h3>${escapeHtml(text.replace(/^###\s+/,''))}</h3>`); }
+        else if (/^##\s+/.test(text)) { flushList(); out.push(`<h2>${escapeHtml(text.replace(/^##\s+/,''))}</h2>`); }
+        else if (/^[-*]\s+/.test(text)) list.push(text.replace(/^[-*]\s+/,''));
+        else { flushList(); out.push(`<p>${linkify(escapeHtml(text))}</p>`); }
+      });
+      flushList();
+      return out.join('\n');
+    }
+
+    function sanitizeHtml(html) {
+      const doc = new DOMParser().parseFromString(`<div id="root">${html}</div>`, 'text/html');
+      doc.querySelectorAll('script,iframe,object,embed,form,style,link,meta').forEach(node => node.remove());
+      doc.querySelectorAll('*').forEach(node => {
+        [...node.attributes].forEach(attr => {
+          const name = attr.name.toLowerCase();
+          const value = attr.value.trim().toLowerCase();
+          if (name.startsWith('on') || name === 'srcdoc' || ((name === 'href' || name === 'src') && value.startsWith('javascript:'))) {
+            node.removeAttribute(attr.name);
+          }
+        });
+      });
+      return doc.querySelector('#root').innerHTML.trim();
+    }
+
+    function linkify(value) {
+      return value.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
+    }
+
+    function bodyTextLength() {
+      const doc = new DOMParser().parseFromString(getBodyHtml(), 'text/html');
+      return (doc.body.textContent || '').trim().length;
+    }
+
+    function buildPayload() {
+      const data = readFields();
+      const category = getCategory(data.category);
+      const extras = [data.additionalCategory1, data.additionalCategory2]
+        .filter(Boolean)
+        .filter((id, index, values) => id !== data.category && values.indexOf(id) === index)
+        .map(id => getCategory(id));
+      return {
+        schema_version:'coanews-draft/1.0',
+        external_id:createExternalId(),
+        status:'pending_editor_approval',
+        publish_allowed:false,
+        category,
+        additional_categories:extras,
+        scheduled_at:data.scheduledAt || null,
+        title:data.title.trim(),
+        subtitles:[data.subtitle1, data.subtitle2, data.subtitle3].map(value => value.trim()).filter(Boolean),
+        reporter_email:data.reporterEmail.trim() || null,
+        body_file:'body.html',
+        thumbnail_file:sourceImage ? 'thumbnail.jpg' : null,
+        thumbnail:{
+          width:sourceImage ? 800 : null,
+          height:sourceImage ? 400 : null,
+          alt:data.thumbnailAlt.trim() || null,
+          caption:data.thumbnailCaption.trim() || null,
+          source:data.thumbnailSource.trim() || null,
+        },
+        tags:data.tags.split(',').map(value => value.trim()).filter(Boolean),
+        source_url:data.sourceUrl.trim() || null,
+        options:{
+          comments_enabled:data.commentsEnabled,
+          show_on_main:data.showOnMain,
+          show_as_headline:data.showAsHeadline,
+          article_type:data.articleAd ? 'advertorial' : 'normal',
+          share_news:data.shareNews,
+          share_policy_consent:data.shareConsent,
+          video_generation:'disabled',
+        },
+        generated_at:new Date().toISOString(),
+      };
+    }
+
+    function createExternalId() {
+      const date = new Date().toISOString().slice(0,10).replace(/-/g,'');
+      const source = $('sourceUrl').value || $('title').value || String(Date.now());
+      let hash = 0;
+      for (let i=0; i<source.length; i++) hash = ((hash << 5) - hash + source.charCodeAt(i)) | 0;
+      return `coa-${date}-${Math.abs(hash).toString(36).slice(0,8)}`;
+    }
+
+    function validateDraft(strict = false) {
+      const issues = [];
+      if (!$('title').value.trim()) issues.push('기사 제목을 입력하세요.');
+      if (!$('category').value) issues.push('기본 카테고리를 선택하세요.');
+      const bodyLength = bodyTextLength();
+      if (!bodyLength) issues.push('기사 본문을 입력하세요.');
+      else if (strict && bodyLength < 200) issues.push('본문을 200자 이상 작성한 뒤 패키지를 생성하세요.');
+      if ($('shareNews').checked && !$('shareConsent').checked) issues.push('공유뉴스를 사용할 경우 공유 약관 동의가 필요합니다.');
+      return issues;
+    }
+
+    function updateChecklist() {
+      setCheck('checkTitle', Boolean($('title').value.trim()));
+      setCheck('checkBody', bodyTextLength() >= 200, bodyTextLength() > 0);
+      setCheck('checkCategory', Boolean($('category').value));
+      setCheck('checkReporter', Boolean($('reporterEmail').value.trim()));
+      setCheck('checkImage', Boolean(sourceImage));
+      setCheck('checkSource', Boolean($('sourceUrl').value.trim() || $('thumbnailSource').value.trim()));
+    }
+
+    function setCheck(id, ok, partial = false) {
+      $(id).className = ok ? 'ok' : partial ? 'warn' : '';
+    }
+
+    async function loadImage(file) {
+      if (!file) { sourceImage = null; clearCanvas(); updateChecklist(); return; }
+      if (!['image/jpeg','image/png'].includes(file.type)) {
+        $('thumbnailInput').value = '';
+        showToast('JPG 또는 PNG 이미지만 사용할 수 있습니다.', true);
+        return;
+      }
+      const img = new Image();
+      img.onload = () => {
+        sourceImage = img;
+        drawThumbnail();
+        const ratio = img.naturalWidth / img.naturalHeight;
+        const crop = Math.abs(ratio - 2) > 0.08;
+        $('imageNote').textContent = `원본 ${img.naturalWidth}×${img.naturalHeight}. 800×400 JPG로 변환됩니다.${crop ? ' 현재 비율에서는 일부 크롭 또는 여백이 발생합니다.' : ''}`;
+        if (!$('thumbnailAlt').value) $('thumbnailAlt').value = $('title').value.trim();
+        updateChecklist();
+        saveForm();
+      };
+      img.onerror = () => showToast('이미지를 읽을 수 없습니다.', true);
+      img.src = URL.createObjectURL(file);
+    }
+
+    function clearCanvas() {
+      const canvas = $('thumbnailCanvas');
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#e5e7eb';
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      ctx.fillStyle = '#64748b';
+      ctx.font = '24px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('800 × 400 대표 이미지', canvas.width/2, canvas.height/2);
+    }
+
+    function drawThumbnail() {
+      if (!sourceImage) { clearCanvas(); return; }
+      const canvas = $('thumbnailCanvas');
+      const ctx = canvas.getContext('2d');
+      const mode = $('imageMode').value;
+      ctx.fillStyle = $('imageBackground').value;
+      ctx.fillRect(0,0,canvas.width,canvas.height);
+      const scale = mode === 'cover'
+        ? Math.max(canvas.width/sourceImage.naturalWidth, canvas.height/sourceImage.naturalHeight)
+        : Math.min(canvas.width/sourceImage.naturalWidth, canvas.height/sourceImage.naturalHeight);
+      const width = sourceImage.naturalWidth * scale;
+      const height = sourceImage.naturalHeight * scale;
+      ctx.drawImage(sourceImage, (canvas.width-width)/2, (canvas.height-height)/2, width, height);
+    }
+
+    function canvasBlob() {
+      return new Promise(resolve => $('thumbnailCanvas').toBlob(resolve, 'image/jpeg', .9));
+    }
+
+    function previewBody() {
+      const html = getBodyHtml();
+      $('bodyPreview').hidden = false;
+      $('bodyPreview').innerHTML = html || '<p style="color:#64748b">미리볼 본문이 없습니다.</p>';
+    }
+
+    async function copyBody() {
+      const html = getBodyHtml();
+      if (!html) { showToast('복사할 본문이 없습니다.', true); return; }
+      const doc = new DOMParser().parseFromString(html, 'text/html');
+      const text = doc.body.textContent || '';
+      try {
+        if (window.ClipboardItem && navigator.clipboard?.write) {
+          await navigator.clipboard.write([new ClipboardItem({
+            'text/html':new Blob([html],{type:'text/html'}),
+            'text/plain':new Blob([text],{type:'text/plain'}),
+          })]);
+        } else {
+          await copyText(text);
+        }
+        showToast('편집기용 본문을 복사했습니다.');
+      } catch (_) {
+        await copyText(text);
+        showToast('본문을 일반 텍스트로 복사했습니다.');
+      }
+    }
+
+    async function copyText(value) {
+      if (!value) { showToast('복사할 내용이 없습니다.', true); return; }
+      if (navigator.clipboard?.writeText) return navigator.clipboard.writeText(value);
+      const area = document.createElement('textarea');
+      area.value = value; document.body.appendChild(area); area.select(); document.execCommand('copy'); area.remove();
+    }
+
+    function ensureExportable() {
+      const issues = validateDraft(true);
+      if (issues.length) { showToast(issues[0], true); return false; }
+      return true;
+    }
+
+    function downloadJson() {
+      if (!ensureExportable()) return;
+      const payload = buildPayload();
+      downloadBlob(`${payload.external_id}-article.json`, new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}));
+      showToast('기사 JSON을 내려받았습니다.');
+    }
+
+    function downloadHtml() {
+      if (!ensureExportable()) return;
+      const payload = buildPayload();
+      downloadBlob(`${payload.external_id}-body.html`, new Blob([getBodyHtml()],{type:'text/html'}));
+      showToast('본문 HTML을 내려받았습니다.');
+    }
+
+    async function downloadImage() {
+      if (!sourceImage) { showToast('대표 이미지를 먼저 선택하세요.', true); return; }
+      const payload = buildPayload();
+      downloadBlob(`${payload.external_id}-thumbnail.jpg`, await canvasBlob());
+      showToast('800×400 대표 이미지를 내려받았습니다.');
+    }
+
+    async function downloadZip() {
+      if (!ensureExportable()) return;
+      if (!window.JSZip) {
+        downloadJson(); downloadHtml();
+        if (sourceImage) await downloadImage();
+        showToast('ZIP 모듈을 불러오지 못해 파일을 개별 다운로드했습니다.', true);
+        return;
+      }
+      const payload = buildPayload();
+      const zip = new JSZip();
+      zip.file('article.json', JSON.stringify(payload,null,2));
+      zip.file('body.html', getBodyHtml());
+      zip.file('README.txt', packageReadme(payload));
+      if (sourceImage) zip.file('thumbnail.jpg', await canvasBlob());
+      const blob = await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
+      downloadBlob(`${payload.external_id}.zip`, blob);
+      showToast('코아뉴스 수동등록 패키지를 내려받았습니다.');
+    }
+
+    function packageReadme(payload) {
+      return [
+        'COA NEWS 수동등록 패키지',
+        '',
+        `외부 ID: ${payload.external_id}`,
+        `상태: ${payload.status} (편집장 승인대기)`,
+        `카테고리: ${payload.category?.name || ''}`,
+        '',
+        '1. article.json의 제목, 부제목, 카테고리, 태그를 확인합니다.',
+        '2. body.html을 코아뉴스 기사 편집기에 붙여 넣고 미리보기로 확인합니다.',
+        '3. thumbnail.jpg가 있으면 대표 이미지로 등록하고 출처를 확인합니다.',
+        '4. 메인·헤드라인·공유뉴스·기사형 광고는 필요한 경우에만 수동으로 켭니다.',
+        '5. 기자가 팩트체크와 저작권을 확인한 뒤 관리자 화면에서 뉴스등록합니다.',
+        '6. 뉴스등록된 기사는 편집장 승인대기로 저장되며, 편집장이 승인 여부를 판단합니다.',
+        '',
+        '이 패키지는 편집장 승인이나 자동 공개 발행 권한을 포함하지 않습니다.',
+      ].join('\r\n');
+    }
+
+    function downloadBlob(name, blob) {
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url; link.download = name; link.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    function saveForm() {
+      localStorage.setItem(FORM_KEY, JSON.stringify(readFields()));
+      updateChecklist();
+    }
+
+    function resetForm() {
+      if (!confirm('작성 중인 초안 내용을 모두 초기화할까요?')) return;
+      localStorage.removeItem(FORM_KEY);
+      localStorage.removeItem(SEED_KEY);
+      applyFields(defaultFields());
+      $('thumbnailInput').value = '';
+      sourceImage = null;
+      $('seedInfo').hidden = true;
+      $('bodyPreview').hidden = true;
+      clearCanvas();
+      updateChecklist();
+      showToast('초안을 초기화했습니다.');
+    }
+
+    function showToast(message, error = false) {
+      const el = $('toast');
+      el.textContent = message;
+      el.className = `toast show${error ? ' error' : ''}`;
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => { el.className = 'toast'; }, 3500);
+    }
+
+    function escapeHtml(value) {
+      return String(value || '').replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
+    }
+
+    function init() {
+      buildCategoryOptions();
+      clearCanvas();
+      const seedRaw = localStorage.getItem(SEED_KEY);
+      if (seedRaw) {
+        localStorage.removeItem(SEED_KEY);
+        try { applySeed(JSON.parse(seedRaw)); } catch (_) { applyFields(defaultFields()); }
+      } else {
+        try { applyFields(JSON.parse(localStorage.getItem(FORM_KEY)) || defaultFields()); }
+        catch (_) { applyFields(defaultFields()); }
+      }
+
+      $('draftForm').addEventListener('input', saveForm);
+      $('draftForm').addEventListener('change', saveForm);
+      $('thumbnailInput').onchange = event => loadImage(event.target.files?.[0]);
+      $('imageMode').onchange = drawThumbnail;
+      $('imageBackground').onchange = drawThumbnail;
+      $('previewButton').onclick = previewBody;
+      $('copyBodyButton').onclick = copyBody;
+      $('copyTitleButton').onclick = async () => { await copyText($('title').value.trim()); showToast('제목을 복사했습니다.'); };
+      $('copySubtitleButton').onclick = async () => { await copyText([$ ('subtitle1').value,$('subtitle2').value,$('subtitle3').value].filter(Boolean).join('\n')); showToast('부제목을 복사했습니다.'); };
+      $('copyTagsButton').onclick = async () => { await copyText($('tags').value.trim()); showToast('태그를 복사했습니다.'); };
+      $('copySourceButton').onclick = async () => { await copyText($('sourceUrl').value.trim()); showToast('출처 URL을 복사했습니다.'); };
+      $('downloadJsonButton').onclick = downloadJson;
+      $('downloadHtmlButton').onclick = downloadHtml;
+      $('downloadImageButton').onclick = downloadImage;
+      $('downloadZipButton').onclick = downloadZip;
+      $('resetButton').onclick = resetForm;
+      updateChecklist();
+    }
+
+    init();
+  </script>
+</body>
+</html>

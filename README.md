@@ -26,6 +26,28 @@ docs/index.html
 
 It runs in the browser and uses Jina Reader for browser-friendly fetching. It can preview collected articles and download JSON, CSV, or Markdown.
 
+## COA NEWS Manual Draft Package
+
+The collector does not log in to the newspaper platform or publish articles automatically. Use the safe manual-review flow instead:
+
+1. Collect article ideas in `docs/index.html`.
+2. Select `코아뉴스 초안` on a result card.
+3. Complete the title, subtitles, body, category, reporter, tags, and image attribution.
+4. Add a JPG or PNG representative image. The browser creates an `800 x 400` JPG preview.
+5. Download the ZIP package containing `article.json`, `body.html`, the optional `thumbnail.jpg`, and a registration checklist.
+6. Review the package, enter it in the COA NEWS administrator article form, and select `뉴스등록`.
+7. The registered article remains pending until the editor-in-chief approves, holds, or rejects it.
+
+The package is always marked `pending_editor_approval` with `publish_allowed: false`. It represents an article saved through `뉴스등록` and waiting for the editor-in-chief's decision. Main exposure, headline exposure, advertorial mode, comments, and shared-news distribution are disabled by default.
+
+Open a blank draft directly at:
+
+```text
+docs/coanews-draft.html
+```
+
+If the newspaper platform later adds an import module, use `article.json` as the versioned interchange contract. Imported articles must enter the same editor-approval queue as manually registered news and remain unpublished until approval.
+
 ## Deploy To Vercel
 
 Import this GitHub repo into Vercel:
@@ -56,14 +78,14 @@ Then open `http://127.0.0.1:8080`.
 
 ## Agent Reach VPS Collector
 
-Agent Reach enrichment is designed to run on the VPS, not Vercel serverless. Bootstrap a fresh Ubuntu VPS with:
+Agent Reach enrichment runs on the Vultr VPS, not Vercel serverless. Use the canonical Windows deployment:
 
-```bash
-curl -fsSL https://raw.githubusercontent.com/lycian5/AIMAX004_V1_codex/main/scripts/bootstrap-vps.sh -o /tmp/bootstrap-vps.sh
-sudo bash /tmp/bootstrap-vps.sh
+```powershell
+cd C:\Users\user\Documents\aimax004_v1_codex\deploy\n8n
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\deploy.ps1
 ```
 
-Then edit `/opt/coa-news/.env`, restart services, and import the n8n workflows.
+The deployment starts n8n even before DNS is available and enables Caddy HTTPS after `n8n.coanews.co.kr` resolves to `158.247.245.66`. See `deploy/n8n/README.md` for secrets, backup, DS220j, and recovery operations. The legacy `scripts/bootstrap-vps.sh` path is disabled because it exposed port 5678.
 
 Collector checks:
 
@@ -75,7 +97,7 @@ node scripts/agent-reach-collect.js
 
 It reads active `tracked_keywords`, collects Exa/RSS/YouTube/GitHub candidates, and upserts them into Supabase `raw_articles`.
 Vercel can trigger the VPS/n8n workflow through `/api/cron/agent-reach` when `AGENT_REACH_WEBHOOK_URL` is configured.
-See `n8n/README.md` for VPS and n8n setup.
+See `deploy/n8n/README.md` for VPS and n8n setup.
 
 ## Features
 

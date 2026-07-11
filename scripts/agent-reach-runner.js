@@ -15,6 +15,11 @@ const defaultVenvBin = process.platform === 'win32'
   : path.join(process.env.HOME || '/root', '.agent-reach-venv', 'bin');
 const venvBin = process.env.AGENT_REACH_VENV_BIN || defaultVenvBin;
 
+if (!secret) {
+  console.error('AGENT_REACH_RUNNER_SECRET or AGENT_REACH_WEBHOOK_SECRET is required.');
+  process.exit(1);
+}
+
 let activeRun = null;
 
 const server = http.createServer(async (req, res) => {
@@ -56,7 +61,6 @@ server.listen(port, host, () => {
 });
 
 function isAuthorized(req) {
-  if (!secret) return true;
   const auth = req.headers.authorization || '';
   const headerSecret = req.headers['x-agent-reach-secret'] || '';
   return auth === `Bearer ${secret}` || headerSecret === secret;

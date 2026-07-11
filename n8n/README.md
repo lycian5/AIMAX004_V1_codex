@@ -1,5 +1,7 @@
 # COA NEWS — n8n VPS 운영 가이드
 
+> **중요:** 이 문서는 초기 설계 기록입니다. 실제 배포에는 `deploy/n8n/README.md`와 `deploy/n8n/deploy.ps1`만 사용하십시오. 구형 bootstrap은 비활성화되었으며 n8n 5678 포트를 외부에 열면 안 됩니다.
+
 > **Hetzner CAX11** (ARM64 · 2 vCPU · 4 GB RAM · 40 GB SSD · €3.79/월)
 > Docker + n8n + Supabase + Claude/OpenAI 파이프라인
 
