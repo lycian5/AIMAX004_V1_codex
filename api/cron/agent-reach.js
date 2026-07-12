@@ -1,6 +1,11 @@
 const { assertCronAuth } = require('../lib/cronAuth');
 
 module.exports = async (req, res) => {
+  if (!['GET', 'POST'].includes(req.method)) {
+    res.status(405).json({ error: 'Method not allowed' });
+    return;
+  }
+
   try {
     assertCronAuth(req);
   } catch (err) {
@@ -24,12 +29,14 @@ module.exports = async (req, res) => {
   }
 
   try {
+    const options = req.method === 'POST' ? sanitizeOptions(req.body || {}) : {};
     const upstream = await fetch(webhookUrl, {
       method: 'POST',
       headers,
       body: JSON.stringify({
         source: 'vercel-cron',
         requested_at: new Date().toISOString(),
+        ...options,
       }),
     });
     const text = await upstream.text();
@@ -49,3 +56,29 @@ module.exports = async (req, res) => {
     res.status(502).json({ ok: false, error: err.message });
   }
 };
+
+function sanitizeOptions(body) {
+  const allowedSources = new Set(['exa', 'rss', 'youtube', 'github']);
+  const sources = Array.isArray(body.sources)
+    ? body.sources.filter((source) => allowedSources.has(source))
+    : String(body.sources || '')
+        .split(',')
+        .map((source) => source.trim())
+        .filter((source) => allowedSources.has(source));
+
+  const result = {};
+  if (sources.length) result.sources = sources.join(',');
+  result.limitKeywords = clampInteger(body.limitKeywords, 1, 30, 6);
+  result.exaResults = clampInteger(body.exaResults, 1, 10, 5);
+  result.rssResults = clampInteger(body.rssResults, 1, 20, 8);
+  if (typeof body.keywords === 'string' && body.keywords.trim()) {
+    result.keywords = body.keywords.trim().slice(0, 500);
+  }
+  return result;
+}
+
+function clampInteger(value, min, max, fallback) {
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(max, Math.max(min, parsed));
+}
