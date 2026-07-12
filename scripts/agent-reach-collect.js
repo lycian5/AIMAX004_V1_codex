@@ -2,6 +2,7 @@
 'use strict';
 
 const { spawn } = require('node:child_process');
+const { createHash } = require('node:crypto');
 
 const VALID_CATEGORIES = new Set(['ai_business', 'startup', 'policy']);
 const DEFAULT_SOURCES = ['exa', 'rss', 'youtube', 'github'];
@@ -16,10 +17,12 @@ const githubResults = intArg('github-results', process.env.AGENT_REACH_GITHUB_RE
 const timeoutMs = intArg('timeout-ms', process.env.AGENT_REACH_TIMEOUT_MS, 45000);
 const jinaEnrich = boolArg('jina-enrich', parseBool(process.env.AGENT_REACH_JINA_ENRICH, false));
 
-main().catch((err) => {
-  console.error(JSON.stringify({ ok: false, error: err.message }, null, 2));
-  process.exitCode = 1;
-});
+if (require.main === module) {
+  main().catch((err) => {
+    console.error(JSON.stringify({ ok: false, error: err.message }, null, 2));
+    process.exitCode = 1;
+  });
+}
 
 async function main() {
   const keywords = await loadKeywords();
@@ -248,14 +251,29 @@ function parseExaText(text) {
 
 function makeRow(keyword, item) {
   const category = VALID_CATEGORIES.has(keyword.category) ? keyword.category : 'ai_business';
+  const canonicalUrl = normalizeUrl(item.url);
+  const sourceProfile = classifySource(item.source, canonicalUrl);
+  const title = cleanText(item.title || item.url || 'Untitled').slice(0, 500);
+  const summary = item.summary ? cleanText(item.summary).slice(0, 1200) : null;
+  const publishedAt = toIsoOrNull(item.published_at);
+  const evidenceScore = scoreEvidence(title, summary);
   return {
     keyword_id: keyword.id || null,
     category,
     source: String(item.source || 'agent_reach').slice(0, 120),
-    title: cleanText(item.title || item.url || 'Untitled').slice(0, 500),
-    url: normalizeUrl(item.url),
-    summary: item.summary ? cleanText(item.summary).slice(0, 1200) : null,
-    published_at: toIsoOrNull(item.published_at),
+    title,
+    url: canonicalUrl,
+    summary,
+    published_at: publishedAt,
+    canonical_url: canonicalUrl,
+    source_domain: hostName(canonicalUrl),
+    source_type: sourceProfile.type,
+    authority_score: sourceProfile.authority,
+    evidence_score: evidenceScore,
+    quality_score: scoreQuality(sourceProfile.authority, evidenceScore, publishedAt),
+    verification_status: sourceProfile.type === 'official' ? 'verified' : 'needs_verification',
+    event_fingerprint: eventFingerprint(title, publishedAt, category),
+    last_checked_at: new Date().toISOString(),
   };
 }
 
@@ -501,10 +519,54 @@ function normalizeUrl(value) {
   try {
     const url = new URL(text);
     url.hash = '';
+    for (const key of [...url.searchParams.keys()]) {
+      if (/^(utm_|fbclid$|gclid$|ref$|source$|campaign$)/i.test(key)) url.searchParams.delete(key);
+    }
+    url.hostname = url.hostname.toLowerCase();
+    if ((url.protocol === 'https:' && url.port === '443') || (url.protocol === 'http:' && url.port === '80')) url.port = '';
     return url.toString();
   } catch {
     return text;
   }
+}
+
+function classifySource(source, url) {
+  const domain = hostName(url);
+  if (/youtube/i.test(source) || /youtube\.com|youtu\.be/.test(domain)) return { type: 'video', authority: 35 };
+  if (/github/i.test(source) || domain === 'github.com') return { type: 'repository', authority: 45 };
+  if (/reddit|community|cafe|blog/i.test(source) || /reddit\.com|blog\.naver\.com/.test(domain)) return { type: 'community', authority: 25 };
+  if (/\.go\.kr$|\.gov$|\.gov\.kr$|kosis\.kr$|data\.go\.kr$|dart\.fss\.or\.kr$/.test(domain)) return { type: 'official', authority: 95 };
+  if (/newsroom|press|official/i.test(source)) return { type: 'official', authority: 85 };
+  if (/rss|exa/i.test(source)) return { type: 'media', authority: 55 };
+  return { type: 'unknown', authority: 40 };
+}
+
+function scoreEvidence(title, summary) {
+  const text = `${title || ''} ${summary || ''}`;
+  let score = 10;
+  if (/\d/.test(text)) score += 20;
+  if (/\d+(?:\.\d+)?\s*(?:%|원|억원|조원|명|건|개|배|년|월|일)/.test(text)) score += 25;
+  if (/발표|공고|통계|조사|보고서|자료|공시/.test(text)) score += 20;
+  if ((summary || '').length >= 250) score += 15;
+  return Math.min(100, score);
+}
+
+function scoreQuality(authority, evidence, publishedAt) {
+  const freshness = publishedAt && Date.now() - new Date(publishedAt).getTime() <= 7 * 86400000 ? 20 : 10;
+  return Math.min(100, Math.round(authority * 0.45 + evidence * 0.35 + freshness));
+}
+
+function eventFingerprint(title, publishedAt, category) {
+  const dateBucket = publishedAt ? publishedAt.slice(0, 10) : 'undated';
+  const normalizedTitle = cleanText(title)
+    .toLowerCase()
+    .replace(/[^0-9a-z가-힣\s]/g, ' ')
+    .split(/\s+/)
+    .filter((token) => token.length > 1)
+    .slice(0, 12)
+    .sort()
+    .join(' ');
+  return createHash('sha256').update(`${category}|${dateBucket}|${normalizedTitle}`).digest('hex');
 }
 
 function toIsoOrNull(value) {
@@ -537,3 +599,11 @@ function requiredEnv(name) {
   if (!value) throw new Error(`${name} 환경변수가 필요합니다.`);
   return value;
 }
+
+module.exports = {
+  classifySource,
+  eventFingerprint,
+  normalizeUrl,
+  scoreEvidence,
+  scoreQuality,
+};
