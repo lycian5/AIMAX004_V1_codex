@@ -168,7 +168,8 @@ fi
 echo "==> Install Agent Reach runner"
 install -m 0644 /opt/n8n/systemd/coa-agent-reach-runner.service /etc/systemd/system/coa-agent-reach-runner.service
 systemctl daemon-reload
-systemctl enable --now coa-agent-reach-runner
+systemctl enable coa-agent-reach-runner
+systemctl restart coa-agent-reach-runner
 
 echo "==> Start Postgres and n8n"
 docker compose up -d
