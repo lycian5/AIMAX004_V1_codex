@@ -1,6 +1,7 @@
 const { getSupabase } = require('../lib/supabase');
 const { assertCronAuth } = require('../lib/cronAuth');
 const { getOpenAI } = require('../lib/openai');
+const { resolveOpenAIModel } = require('../lib/openaiModels');
 const { getDatalabTrend } = require('../lib/naver');
 const { postBriefing } = require('../lib/slack');
 
@@ -69,7 +70,8 @@ module.exports = async (req, res) => {
     const quadrants = await computeQuadrants(byCategory);
 
     const openai = getOpenAI();
-    const suggestions = await requestSuggestions(openai, byCategory, quadrants);
+    const model = resolveOpenAIModel('suggest', req.query?.model);
+    const suggestions = await requestSuggestions(openai, byCategory, quadrants, model);
 
     if (suggestions.length) {
       const rows = suggestions.map((s) => ({
@@ -88,7 +90,7 @@ module.exports = async (req, res) => {
 
     await postBriefing(formatSlackMessage(suggestions));
 
-    res.status(200).json({ suggestionsCreated: suggestions.length });
+    res.status(200).json({ suggestionsCreated: suggestions.length, model });
   } catch (err) {
     console.error('[suggest] 실패:', err.message);
     res.status(500).json({ error: err.message });
@@ -157,7 +159,7 @@ async function computeQuadrants(byCategory) {
   return quadrants;
 }
 
-async function requestSuggestions(openai, byCategory, quadrants) {
+async function requestSuggestions(openai, byCategory, quadrants, model) {
   const summary = Object.entries(byCategory)
     .map(([category, articles]) => {
       const label = CATEGORY_LABEL[category] || category;
@@ -191,7 +193,7 @@ async function requestSuggestions(openai, byCategory, quadrants) {
 - 반드시 8건을 제안`;
 
   const response = await openai.chat.completions.create({
-    model: 'gpt-5.4',
+    model,
     messages: [
       { role: 'system', content: system },
       { role: 'user', content: `[오늘의 카테고리별 키워드 분석]\n\n${summary}` },

@@ -5,6 +5,7 @@
   "description": "Standalone policy article collector static UI for Vercel.",
   "scripts": {
     "start": "python -m http.server 8080 -d docs",
+    "test:models": "node tests/test_openai_models.js",
     "collect:agent-reach": "node scripts/agent-reach-collect.js",
     "agent-reach:runner": "node scripts/agent-reach-runner.js"
   },
