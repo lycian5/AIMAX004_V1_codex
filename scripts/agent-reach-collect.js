@@ -88,8 +88,8 @@ async function collectExa(keyword) {
   const output = await runCommand('mcporter', [
     'call',
     'exa.web_search_exa',
-    `query=${query}`,
-    `numResults=${exaResults}`,
+    '--args',
+    JSON.stringify({ query, numResults: exaResults }),
     '--output',
     'json',
     '--timeout',

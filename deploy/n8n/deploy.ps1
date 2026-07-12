@@ -164,6 +164,9 @@ if [ ! -x /root/.agent-reach-venv/bin/agent-reach ]; then
   /root/.agent-reach-venv/bin/python -m pip install "https://github.com/Panniantong/Agent-Reach/archive/main.zip"
   PATH="/root/.agent-reach-venv/bin:$PATH" agent-reach install --env=auto || true
 fi
+if ! mcporter config list 2>/dev/null | grep -q '^exa$'; then
+  mcporter config add exa https://mcp.exa.ai/mcp
+fi
 
 echo "==> Install Agent Reach runner"
 install -m 0644 /opt/n8n/systemd/coa-agent-reach-runner.service /etc/systemd/system/coa-agent-reach-runner.service
