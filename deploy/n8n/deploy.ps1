@@ -197,7 +197,8 @@ else
   echo "HTTPS_READY=0"
 fi
 
-docker ps
+/usr/bin/docker ps
+echo "DEPLOY_COMPLETE"
 '@
 
 Invoke-Step "Configure and start VPS services" {
