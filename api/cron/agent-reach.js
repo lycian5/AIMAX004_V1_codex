@@ -36,6 +36,7 @@ module.exports = async (req, res) => {
       body: JSON.stringify({
         source: 'vercel-cron',
         requested_at: new Date().toISOString(),
+        async: req.method === 'POST',
         ...options,
       }),
     });

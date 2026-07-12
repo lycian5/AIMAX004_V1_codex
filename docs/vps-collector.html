@@ -64,7 +64,12 @@
           }),
         });
         const data = await response.json();
-        show(JSON.stringify(data, null, 2), response.ok && data.ok !== false);
+        const accepted = data?.body?.accepted === true;
+        if (accepted) {
+          show('수집 작업이 VPS에 접수되었습니다. 수집과 Supabase 저장은 백그라운드에서 계속됩니다.\n\n' + JSON.stringify(data, null, 2), true);
+        } else {
+          show(JSON.stringify(data, null, 2), response.ok && data.ok !== false);
+        }
       } catch (error) { show(error.message, false); }
       finally { run.disabled = false; }
     });

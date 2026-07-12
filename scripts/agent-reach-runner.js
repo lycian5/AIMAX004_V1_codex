@@ -47,6 +47,11 @@ const server = http.createServer(async (req, res) => {
     const body = await readJson(req);
     const args = buildCollectorArgs(body || {});
     activeRun = runCollector(args);
+    if (body?.async === true) {
+      activeRun.finally(() => { activeRun = null; });
+      sendJson(res, 202, { ok: true, accepted: true, args });
+      return;
+    }
     const result = await activeRun;
     activeRun = null;
     sendJson(res, result.exitCode === 0 ? 200 : 500, result);

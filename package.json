@@ -7,6 +7,7 @@
     "start": "python -m http.server 8080 -d docs",
     "test:models": "node tests/test_openai_models.js",
     "test:agent-reach": "node tests/test_agent_reach_options.js",
+    "test:agent-reach-runner": "node tests/test_agent_reach_runner.js",
     "collect:agent-reach": "node scripts/agent-reach-collect.js",
     "agent-reach:runner": "node scripts/agent-reach-runner.js"
   },
