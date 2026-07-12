@@ -1,5 +1,7 @@
 {
+  "id": "coaAgentReachCollectV1",
   "name": "COA NEWS — Agent Reach 보강 수집",
+  "active": false,
   "nodes": [
     {
       "parameters": {
