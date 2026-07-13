@@ -3,7 +3,7 @@ set -eu
 umask 077
 
 VPS_HOST="${VPS_HOST:-158.247.245.66}"
-VPS_USER="${VPS_USER:-backup}"
+VPS_USER="${VPS_USER:-coa-backup}"
 VPS_PORT="${VPS_PORT:-22}"
 SSH_KEY="${SSH_KEY:-/volume1/backup/coa-n8n/keys/vps-backup}"
 REMOTE_DIR="${REMOTE_DIR:-/opt/backups/coa-n8n}"

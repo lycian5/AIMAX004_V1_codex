@@ -58,5 +58,9 @@ export BACKUP_ENCRYPTION_PASSWORD
 openssl enc -aes-256-cbc -salt -pbkdf2 -iter 200000 \
   -in "$PLAIN_ARCHIVE" -out "$FINAL_ARCHIVE" -pass env:BACKUP_ENCRYPTION_PASSWORD
 (cd "$BACKUP_DIR" && sha256sum "$(basename "$FINAL_ARCHIVE")" > "$(basename "$FINAL_ARCHIVE").sha256")
+if getent group coa-backup >/dev/null 2>&1; then
+  chgrp coa-backup "$FINAL_ARCHIVE" "$FINAL_ARCHIVE.sha256"
+  chmod 640 "$FINAL_ARCHIVE" "$FINAL_ARCHIVE.sha256"
+fi
 find "$BACKUP_DIR" -type f -name 'coa-n8n-*.tar.gz.enc*' -mtime "+$BACKUP_RETENTION_DAYS" -delete
 echo "Backup created: $FINAL_ARCHIVE"

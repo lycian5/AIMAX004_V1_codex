@@ -179,6 +179,12 @@ docker compose up -d
 
 echo "==> Install daily encrypted backup"
 chmod 700 /opt/n8n/backup.sh /opt/n8n/restore.sh /opt/n8n/health-check.sh
+getent group coa-backup >/dev/null || groupadd --system coa-backup
+id coa-backup >/dev/null 2>&1 || useradd --system --create-home --shell /bin/bash --gid coa-backup coa-backup
+passwd -l coa-backup >/dev/null 2>&1 || true
+install -d -m 0711 -o root -g root /opt/backups
+install -d -m 0750 -o root -g coa-backup /opt/backups/coa-n8n
+find /opt/backups/coa-n8n -maxdepth 1 -type f -name 'coa-n8n-*.tar.gz.enc*' -exec chgrp coa-backup {} + -exec chmod 0640 {} +
 install -m 0644 /opt/n8n/systemd/coa-n8n-backup.service /etc/systemd/system/coa-n8n-backup.service
 install -m 0644 /opt/n8n/systemd/coa-n8n-backup.timer /etc/systemd/system/coa-n8n-backup.timer
 systemctl daemon-reload
