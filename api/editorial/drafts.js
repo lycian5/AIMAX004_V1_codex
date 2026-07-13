@@ -9,7 +9,7 @@ const DRAFT_SCHEMA = {
     title: { type: 'string' },
     subtitle: { type: 'string' },
     summary: { type: 'string' },
-    body_html: { type: 'string' },
+    body_html: { type: 'string', minLength: 2300 },
     tags: { type: 'array', items: { type: 'string' } },
   },
   required: ['title', 'subtitle', 'summary', 'body_html', 'tags'],
@@ -85,7 +85,7 @@ async function generateDraft(req, res) {
   const response = await getOpenAI().chat.completions.create({
     model,
     messages: [
-      { role: 'system', content: '당신은 코아뉴스 취재기자입니다. 제공된 근거만 사용해 한국어 뉴스 기사를 작성하세요. 확인되지 않은 사실, 가상 인용, 임의 수치를 만들지 마세요. 본문은 2000자 이상을 목표로 하며 HTML p, h3, ul, li 태그만 사용합니다. 출처 간 차이가 있으면 단정하지 말고 확인 필요 사항을 명시하세요.' },
+      { role: 'system', content: '당신은 코아뉴스 취재기자입니다. 제공된 근거만 사용해 한국어 뉴스 기사를 작성하세요. 확인되지 않은 사실, 가상 인용, 임의 수치를 만들지 마세요. HTML 태그를 제외한 본문 텍스트를 반드시 2000자 이상 작성하고, body_html은 최소 2300자 이상이어야 합니다. HTML은 p, h3, ul, li 태그만 사용합니다. 출처 간 차이가 있으면 단정하지 말고 확인 필요 사항을 명시하세요.' },
       { role: 'user', content: buildEvidencePrompt(cluster, articles, facts) },
     ],
     response_format: { type: 'json_schema', json_schema: { name: 'coanews_editorial_draft', strict: true, schema: DRAFT_SCHEMA } },

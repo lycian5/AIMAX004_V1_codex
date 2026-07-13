@@ -4,6 +4,7 @@ const api = fs.readFileSync(require.resolve('../api/editorial/drafts'), 'utf8');
 const page = fs.readFileSync(require.resolve('../docs/editorial-drafts.html'), 'utf8');
 const migration = fs.readFileSync(require.resolve('../supabase/migrations/20260713_editorial_workflow.sql'), 'utf8');
 assert.match(api, /resolveOpenAIModel\('draft'/);
+assert.match(api, /minLength:\s*2300/);
 assert.match(api, /pending_editor_approval/);
 assert.match(api, /action === 'approve'/);
 assert.match(api, /action === 'reject'/);
