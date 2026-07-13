@@ -4,6 +4,7 @@ const script = fs.readFileSync(require.resolve('../deploy/n8n/health-check.sh'),
 const timer = fs.readFileSync(require.resolve('../deploy/n8n/systemd/coa-ops-health.timer'), 'utf8');
 const nasKeyInstaller = fs.readFileSync(require.resolve('../deploy/n8n/nas/install-vps-key.sh'), 'utf8');
 const nasPull = fs.readFileSync(require.resolve('../deploy/n8n/nas/pull-backups.sh'), 'utf8');
+const deploy = fs.readFileSync(require.resolve('../deploy/n8n/deploy.ps1'), 'utf8');
 assert.match(script, /coa-n8n-postgres/);
 assert.match(script, /coa-agent-reach-runner/);
 assert.match(script, /older than 36 hours/);
@@ -12,4 +13,7 @@ assert.match(timer, /OnUnitActiveSec=15m/);
 assert.match(nasKeyInstaller, /rrsync -ro \/opt\/backups\/coa-n8n/);
 assert.match(nasKeyInstaller, /restrict,command=/);
 assert.match(nasPull, /REMOTE_DIR="\$\{REMOTE_DIR:-\.\}"/);
+assert.match(deploy, /N8N_DOCKER_SUBNET=.*docker network inspect/);
+assert.match(deploy, /ufw allow from "\$N8N_DOCKER_SUBNET" to any port 8787/);
+assert.doesNotMatch(deploy, /ufw allow 8787/);
 process.stdout.write('Operations health checks passed.\n');

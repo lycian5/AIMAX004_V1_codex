@@ -177,6 +177,16 @@ systemctl restart coa-agent-reach-runner
 echo "==> Start Postgres and n8n"
 docker compose up -d
 
+echo "==> Allow n8n container to reach the host Agent Reach runner"
+N8N_NETWORK_ID="$(docker inspect coa-n8n --format '{{range .NetworkSettings.Networks}}{{.NetworkID}}{{end}}')"
+N8N_DOCKER_SUBNET="$(docker network inspect "$N8N_NETWORK_ID" --format '{{range .IPAM.Config}}{{.Subnet}}{{end}}')"
+if [ -z "$N8N_DOCKER_SUBNET" ]; then
+  echo "[ERROR] Could not determine the n8n Docker subnet." >&2
+  exit 1
+fi
+ufw allow from "$N8N_DOCKER_SUBNET" to any port 8787 proto tcp comment 'n8n to Agent Reach runner'
+ufw reload
+
 echo "==> Install daily encrypted backup"
 chmod 700 /opt/n8n/backup.sh /opt/n8n/restore.sh /opt/n8n/health-check.sh
 getent group coa-backup >/dev/null || groupadd --system coa-backup
@@ -199,6 +209,7 @@ systemctl enable --now coa-ops-health.timer
 echo "==> Local health checks"
 docker compose ps
 curl -fsS http://127.0.0.1:8787/health
+docker exec coa-n8n node -e "fetch(process.env.AGENT_REACH_RUNNER_URL.replace('/run','/health')).then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
 
 echo "==> DNS and HTTPS activation"
 DNS_IP="$(getent ahostsv4 n8n.coanews.co.kr | awk '{print $1; exit}' || true)"
