@@ -12,6 +12,25 @@ const {
   scoreQuality,
   titleSimilarity,
 } = require('../scripts/agent-reach-collect');
+const { selectHybridKeywords } = require('../scripts/keyword-selection');
+
+const keywordPool = Array.from({ length: 10 }, (_, index) => ({ id: index + 1, keyword: `keyword-${index + 1}` }));
+const hybridDayOne = selectHybridKeywords(keywordPool, {
+  limitKeywords: 6,
+  coreKeywordCount: 4,
+  rotatingKeywordCount: 2,
+  date: new Date('2026-07-14T00:00:00Z'),
+});
+const hybridDayTwo = selectHybridKeywords(keywordPool, {
+  limitKeywords: 6,
+  coreKeywordCount: 4,
+  rotatingKeywordCount: 2,
+  date: new Date('2026-07-15T00:00:00Z'),
+});
+assert.equal(hybridDayOne.length, 6);
+assert.deepEqual(hybridDayOne.slice(0, 4).map((item) => item.id), [1, 2, 3, 4]);
+assert.deepEqual(hybridDayTwo.slice(0, 4).map((item) => item.id), [1, 2, 3, 4]);
+assert.notDeepEqual(hybridDayOne.slice(4).map((item) => item.id), hybridDayTwo.slice(4).map((item) => item.id));
 
 assert.equal(normalizeUrl('HTTPS://Example.com/a?utm_source=x&id=1#top'), 'https://example.com/a?id=1');
 assert.deepEqual(classifySource('rss', 'https://www.korea.go.kr/news'), { type: 'official', authority: 95 });

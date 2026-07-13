@@ -3,6 +3,7 @@ const { assertCronAuth } = require('../lib/cronAuth');
 const { searchNews } = require('../lib/naver');
 const { searchGoogleNews } = require('../lib/googleNews');
 const { fetchPolicyNotices } = require('../lib/policySources');
+const { selectHybridKeywords } = require('../../scripts/keyword-selection');
 
 function stripHtml(str) {
   return String(str || '')
@@ -36,8 +37,10 @@ module.exports = async (req, res) => {
 
   const { data: keywords, error: kwError } = await supabase
     .from('tracked_keywords')
-    .select('id, keyword, category')
-    .eq('status', 'active');
+    .select('id, keyword, category, datalab_priority')
+    .eq('status', 'active')
+    .order('datalab_priority', { ascending: true })
+    .order('id', { ascending: true });
 
   if (kwError) {
     res.status(500).json({ error: kwError.message });
@@ -46,8 +49,14 @@ module.exports = async (req, res) => {
 
   let articlesUpserted = 0;
   let keywordFailures = 0;
+  const selectedKeywords = selectHybridKeywords(keywords || [], {
+    limitKeywords: process.env.AGENT_REACH_LIMIT_KEYWORDS || 6,
+    coreKeywordCount: process.env.AGENT_REACH_CORE_KEYWORDS || 4,
+    rotatingKeywordCount: process.env.AGENT_REACH_ROTATING_KEYWORDS || 2,
+    date: new Date(),
+  });
 
-  for (const kw of keywords || []) {
+  for (const kw of selectedKeywords) {
     try {
       const [naverItems, googleItems] = await Promise.all([
         searchNews(kw.keyword).catch((e) => {
@@ -123,7 +132,7 @@ module.exports = async (req, res) => {
   }
 
   res.status(200).json({
-    keywordsProcessed: (keywords || []).length,
+    keywordsProcessed: selectedKeywords.length,
     keywordFailures,
     articlesUpserted,
     policyNoticesUpserted,

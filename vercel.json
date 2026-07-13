@@ -6,7 +6,6 @@
   "trailingSlash": false,
   "crons": [
     { "path": "/api/cron/collect", "schedule": "0 21 * * *" },
-    { "path": "/api/cron/agent-reach", "schedule": "30 21 * * *" },
     { "path": "/api/cron/suggest", "schedule": "0 22 * * *" }
   ]
 }

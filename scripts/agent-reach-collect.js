@@ -3,6 +3,7 @@
 
 const { spawn } = require('node:child_process');
 const { createHash } = require('node:crypto');
+const { selectHybridKeywords } = require('./keyword-selection');
 
 const VALID_CATEGORIES = new Set(['ai_business', 'startup', 'policy']);
 const DEFAULT_SOURCES = ['exa', 'rss', 'youtube', 'github'];
@@ -10,7 +11,10 @@ const DEFAULT_SOURCES = ['exa', 'rss', 'youtube', 'github'];
 const args = parseArgs(process.argv.slice(2));
 const dryRun = boolArg('dry-run', false);
 const sources = splitList(args.sources || process.env.AGENT_REACH_SOURCES || DEFAULT_SOURCES.join(','));
+const inlineKeywords = splitList(args.keywords || process.env.AGENT_REACH_KEYWORDS || '');
 const limitKeywords = intArg('limit-keywords', process.env.AGENT_REACH_LIMIT_KEYWORDS, 18);
+const coreKeywordCount = intArg('core-keywords', process.env.AGENT_REACH_CORE_KEYWORDS, 4);
+const rotatingKeywordCount = intArg('rotating-keywords', process.env.AGENT_REACH_ROTATING_KEYWORDS, 2);
 const exaResults = intArg('exa-results', process.env.AGENT_REACH_EXA_RESULTS, 5);
 const officialResults = intArg('official-results', process.env.AGENT_REACH_OFFICIAL_RESULTS, 3);
 const youtubeResults = intArg('youtube-results', process.env.AGENT_REACH_YOUTUBE_RESULTS, 3);
@@ -27,7 +31,14 @@ if (require.main === module) {
 
 async function main() {
   const keywords = await loadKeywords();
-  const limitedKeywords = keywords.slice(0, limitKeywords);
+  const limitedKeywords = inlineKeywords.length
+    ? keywords.slice(0, limitKeywords)
+    : selectHybridKeywords(keywords, {
+        limitKeywords,
+        coreKeywordCount,
+        rotatingKeywordCount,
+        date: new Date(),
+      });
   const allRows = [];
   const failures = [];
   let factsExtracted = 0;
@@ -78,7 +89,6 @@ async function main() {
 }
 
 async function loadKeywords() {
-  const inlineKeywords = splitList(args.keywords || process.env.AGENT_REACH_KEYWORDS || '');
   if (inlineKeywords.length) {
     return inlineKeywords.map((entry) => {
       const [keyword, category = 'ai_business'] = entry.split(':').map((part) => part.trim());
@@ -90,7 +100,7 @@ async function loadKeywords() {
   const qs = new URLSearchParams({
     status: 'eq.active',
     select: 'id,keyword,category,datalab_priority',
-    order: 'datalab_priority.asc',
+    order: 'datalab_priority.asc,id.asc',
   });
   const data = await supabaseRequest(`${url}/rest/v1/tracked_keywords?${qs.toString()}`);
   return data.map(normalizeKeyword).filter((item) => item.keyword);
@@ -844,5 +854,6 @@ module.exports = {
   normalizeUrl,
   scoreEvidence,
   scoreQuality,
+  selectHybridKeywords,
   titleSimilarity,
 };
