@@ -1,0 +1,14 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const api = fs.readFileSync(require.resolve('../api/editorial/drafts'), 'utf8');
+const page = fs.readFileSync(require.resolve('../docs/editorial-drafts.html'), 'utf8');
+const migration = fs.readFileSync(require.resolve('../supabase/migrations/20260713_editorial_workflow.sql'), 'utf8');
+assert.match(api, /resolveOpenAIModel\('draft'/);
+assert.match(api, /pending_editor_approval/);
+assert.match(api, /action === 'approve'/);
+assert.match(api, /action === 'reject'/);
+assert.match(api, /허용되지 않은 상태 전환/);
+assert.match(page, /등록용 복사/);
+assert.match(page, /JSON 내보내기/);
+assert.match(migration, /create table if not exists editorial_drafts/);
+process.stdout.write('Editorial workflow checks passed.\n');

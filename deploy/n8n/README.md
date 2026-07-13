@@ -35,7 +35,9 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\deploy.ps1 -PrepareOnl
 
 배포 스크립트는 Docker와 Caddy를 설치하고, UFW에서 OpenSSH/80/443만 허용하며, Agent Reach systemd 서비스와 일일 백업 타이머를 등록합니다. `5678`과 `8787`은 외부 방화벽에 열지 않습니다.
 
-기본 수집 채널은 인증 없이 안정적으로 동작하는 `exa,rss`입니다. GitHub를 추가하려면 VPS에서 `gh auth login` 또는 `GH_TOKEN`을 설정하고, YouTube를 추가하려면 `yt-dlp`용 쿠키를 별도로 설정한 뒤 `AGENT_REACH_SOURCES`에 `github`, `youtube`를 추가하세요.
+기본 수집 채널은 `exa,official,rss`입니다. GitHub를 추가하려면 VPS에서 `gh auth login` 또는 `GH_TOKEN`을 설정하고, YouTube를 추가하려면 `yt-dlp`용 쿠키를 별도로 설정한 뒤 `AGENT_REACH_SOURCES`에 `github`, `youtube`를 추가하세요.
+
+운영 헬스체크는 15분마다 n8n, PostgreSQL, Agent Reach, HTTPS, 최근 암호화 백업을 확인합니다. `.env`에 `SLACK_WEBHOOK_URL`을 설정하면 장애 발생 시 Slack으로 알립니다. `SUPABASE_DB_URL`을 설정하면 일일 암호화 백업에 Supabase PostgreSQL 덤프도 포함됩니다.
 
 ## DNS 전 임시 접속
 

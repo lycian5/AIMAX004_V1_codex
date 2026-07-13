@@ -178,11 +178,17 @@ echo "==> Start Postgres and n8n"
 docker compose up -d
 
 echo "==> Install daily encrypted backup"
-chmod 700 /opt/n8n/backup.sh /opt/n8n/restore.sh
+chmod 700 /opt/n8n/backup.sh /opt/n8n/restore.sh /opt/n8n/health-check.sh
 install -m 0644 /opt/n8n/systemd/coa-n8n-backup.service /etc/systemd/system/coa-n8n-backup.service
 install -m 0644 /opt/n8n/systemd/coa-n8n-backup.timer /etc/systemd/system/coa-n8n-backup.timer
 systemctl daemon-reload
 systemctl enable --now coa-n8n-backup.timer
+
+echo "==> Install operations health checks"
+install -m 0644 /opt/n8n/systemd/coa-ops-health.service /etc/systemd/system/coa-ops-health.service
+install -m 0644 /opt/n8n/systemd/coa-ops-health.timer /etc/systemd/system/coa-ops-health.timer
+systemctl daemon-reload
+systemctl enable --now coa-ops-health.timer
 
 echo "==> Local health checks"
 docker compose ps

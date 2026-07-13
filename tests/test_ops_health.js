@@ -1,0 +1,10 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const script = fs.readFileSync(require.resolve('../deploy/n8n/health-check.sh'), 'utf8');
+const timer = fs.readFileSync(require.resolve('../deploy/n8n/systemd/coa-ops-health.timer'), 'utf8');
+assert.match(script, /coa-n8n-postgres/);
+assert.match(script, /coa-agent-reach-runner/);
+assert.match(script, /older than 36 hours/);
+assert.match(script, /SLACK_WEBHOOK_URL/);
+assert.match(timer, /OnUnitActiveSec=15m/);
+process.stdout.write('Operations health checks passed.\n');

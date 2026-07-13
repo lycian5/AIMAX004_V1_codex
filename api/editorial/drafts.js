@@ -1,0 +1,119 @@
+const { getSupabase } = require('../lib/supabase');
+const { assertCronAuth } = require('../lib/cronAuth');
+const { getOpenAI } = require('../lib/openai');
+const { resolveOpenAIModel } = require('../lib/openaiModels');
+
+const DRAFT_SCHEMA = {
+  type: 'object',
+  properties: {
+    title: { type: 'string' },
+    subtitle: { type: 'string' },
+    summary: { type: 'string' },
+    body_html: { type: 'string' },
+    tags: { type: 'array', items: { type: 'string' } },
+  },
+  required: ['title', 'subtitle', 'summary', 'body_html', 'tags'],
+  additionalProperties: false,
+};
+
+module.exports = async (req, res) => {
+  try { assertCronAuth(req); } catch (err) { res.status(err.statusCode || 401).json({ error: err.message }); return; }
+  try {
+    if (req.method === 'GET') return listDrafts(req, res);
+    if (req.method === 'POST') return generateDraft(req, res);
+    if (req.method === 'PATCH') return updateDraft(req, res);
+    res.status(405).json({ error: 'Method not allowed' });
+  } catch (err) {
+    console.error('[editorial/drafts]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+};
+
+async function listDrafts(req, res) {
+  const supabase = getSupabase();
+  let query = supabase.from('editorial_drafts').select('*').order('updated_at', { ascending: false }).limit(100);
+  if (req.query?.id) query = query.eq('id', req.query.id);
+  if (req.query?.status) query = query.eq('status', req.query.status);
+  const { data, error } = await query;
+  if (error) throw error;
+  res.status(200).json({ drafts: data || [] });
+}
+
+async function generateDraft(req, res) {
+  const clusterId = Number.parseInt(req.body?.eventClusterId, 10);
+  if (!clusterId) return res.status(400).json({ error: 'eventClusterId is required' });
+  const supabase = getSupabase();
+  const [{ data: cluster, error: clusterError }, { data: articles, error: articleError }, { data: facts, error: factError }] = await Promise.all([
+    supabase.from('event_clusters').select('*').eq('id', clusterId).single(),
+    supabase.from('raw_articles').select('title,url,summary,source_domain,source_type,quality_score,verification_status').eq('event_cluster_id', clusterId).order('quality_score', { ascending: false }),
+    supabase.from('article_facts').select('fact_text,fact_type,source_url,is_official,confidence').eq('event_cluster_id', clusterId).order('confidence', { ascending: false }),
+  ]);
+  if (clusterError) throw clusterError;
+  if (articleError) throw articleError;
+  if (factError) throw factError;
+  if (!articles?.length) return res.status(400).json({ error: '근거 기사가 없습니다.' });
+
+  const model = resolveOpenAIModel('draft', req.body?.model);
+  const response = await getOpenAI().chat.completions.create({
+    model,
+    messages: [
+      { role: 'system', content: '당신은 코아뉴스 취재기자입니다. 제공된 근거만 사용해 한국어 뉴스 기사를 작성하세요. 확인되지 않은 사실, 가상 인용, 임의 수치를 만들지 마세요. 본문은 2000자 이상을 목표로 하며 HTML p, h3, ul, li 태그만 사용합니다. 출처 간 차이가 있으면 단정하지 말고 확인 필요 사항을 명시하세요.' },
+      { role: 'user', content: buildEvidencePrompt(cluster, articles, facts) },
+    ],
+    response_format: { type: 'json_schema', json_schema: { name: 'coanews_editorial_draft', strict: true, schema: DRAFT_SCHEMA } },
+  });
+  const content = response.choices[0]?.message?.content;
+  if (!content) throw new Error('OpenAI 초안 응답이 비어 있습니다.');
+  const draft = JSON.parse(content);
+  const row = {
+    event_cluster_id: clusterId,
+    title: draft.title.slice(0, 500),
+    subtitle: draft.subtitle?.slice(0, 500) || null,
+    summary: draft.summary?.slice(0, 1500) || null,
+    body_html: draft.body_html,
+    tags: (draft.tags || []).slice(0, 20),
+    status: 'draft',
+    model,
+  };
+  const { data, error } = await supabase.from('editorial_drafts').insert(row).select().single();
+  if (error) throw error;
+  res.status(201).json({ draft: data });
+}
+
+async function updateDraft(req, res) {
+  const id = Number.parseInt(req.body?.id, 10);
+  if (!id) return res.status(400).json({ error: 'id is required' });
+  const supabase = getSupabase();
+  const { data: current, error: readError } = await supabase.from('editorial_drafts').select('*').eq('id', id).single();
+  if (readError) throw readError;
+  const action = req.body?.action || 'save';
+  const now = new Date().toISOString();
+  const updates = { updated_at: now };
+  if (action === 'save') {
+    if (!['draft', 'rejected'].includes(current.status)) return res.status(409).json({ error: '승인대기 또는 승인 완료 초안은 수정할 수 없습니다.' });
+    for (const [input, column] of [['title','title'],['subtitle','subtitle'],['summary','summary'],['bodyHtml','body_html'],['editorialNotes','editorial_notes']]) {
+      if (typeof req.body?.[input] === 'string') updates[column] = req.body[input];
+    }
+    if (Array.isArray(req.body?.tags)) updates.tags = req.body.tags.slice(0, 20);
+    updates.status = 'draft';
+  } else if (action === 'submit' && ['draft', 'rejected'].includes(current.status)) {
+    updates.status = 'pending_editor_approval'; updates.submitted_at = now; updates.decided_at = null;
+  } else if (action === 'approve' && current.status === 'pending_editor_approval') {
+    updates.status = 'approved'; updates.decided_at = now;
+  } else if (action === 'reject' && current.status === 'pending_editor_approval') {
+    updates.status = 'rejected'; updates.decided_at = now; updates.editorial_notes = String(req.body?.editorialNotes || '').slice(0, 3000);
+  } else {
+    return res.status(409).json({ error: `허용되지 않은 상태 전환입니다: ${current.status} -> ${action}` });
+  }
+  const { data, error } = await supabase.from('editorial_drafts').update(updates).eq('id', id).select().single();
+  if (error) throw error;
+  res.status(200).json({ draft: data });
+}
+
+function buildEvidencePrompt(cluster, articles, facts) {
+  const factText = facts.length ? facts.map((f) => `- [${f.fact_type}] ${f.fact_text} | 공식=${f.is_official} | 신뢰=${f.confidence} | ${f.source_url}`).join('\n') : '- 구조화 사실 없음';
+  const articleText = articles.map((a) => `- ${a.title}\n  출처: ${a.source_domain} (${a.source_type}, 품질 ${a.quality_score})\n  URL: ${a.url}\n  요약: ${a.summary || '없음'}`).join('\n');
+  return `[사건]\n${cluster.representative_title}\n분야: ${cluster.category}\n기준일: ${cluster.event_date || '미상'}\n\n[구조화 사실]\n${factText}\n\n[근거 기사]\n${articleText}`;
+}
+
+module.exports.buildEvidencePrompt = buildEvidencePrompt;

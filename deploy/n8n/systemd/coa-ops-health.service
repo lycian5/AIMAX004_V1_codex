@@ -1,0 +1,8 @@
+[Unit]
+Description=COA NEWS VPS health checks
+After=network-online.target docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/opt/n8n/health-check.sh
+User=root
