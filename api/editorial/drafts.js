@@ -19,6 +19,7 @@ const DRAFT_SCHEMA = {
 module.exports = async (req, res) => {
   try { assertCronAuth(req); } catch (err) { res.status(err.statusCode || 401).json({ error: err.message }); return; }
   try {
+    if (req.method === 'GET' && req.query?.view === 'briefs') return listBriefs(req, res);
     if (req.method === 'GET') return listDrafts(req, res);
     if (req.method === 'POST') return generateDraft(req, res);
     if (req.method === 'PATCH') return updateDraft(req, res);
@@ -28,6 +29,33 @@ module.exports = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+async function listBriefs(req, res) {
+  const supabase = getSupabase();
+  const limit = clamp(req.query?.limit, 1, 100, 30);
+  let query = supabase
+    .from('event_clusters')
+    .select('id,category,representative_title,event_date,first_seen_at,last_seen_at,article_count,official_source_count,status')
+    .order('last_seen_at', { ascending: false })
+    .limit(limit);
+  if (req.query?.category) query = query.eq('category', req.query.category);
+  if (req.query?.status) query = query.eq('status', req.query.status);
+  const { data: clusters, error } = await query;
+  if (error) throw error;
+  const ids = (clusters || []).map((item) => item.id);
+  if (!ids.length) return res.status(200).json({ briefs: [] });
+  const [{ data: articles, error: articleError }, { data: facts, error: factError }] = await Promise.all([
+    supabase.from('raw_articles').select('id,event_cluster_id,title,url,summary,published_at,source_domain,source_type,quality_score,verification_status').in('event_cluster_id', ids).order('quality_score', { ascending: false }),
+    supabase.from('article_facts').select('id,event_cluster_id,raw_article_id,fact_text,fact_type,source_url,is_official,confidence,verified_at').in('event_cluster_id', ids).order('confidence', { ascending: false }),
+  ]);
+  if (articleError) throw articleError;
+  if (factError) throw factError;
+  res.status(200).json({ briefs: clusters.map((cluster) => ({
+    ...cluster,
+    articles: (articles || []).filter((item) => item.event_cluster_id === cluster.id),
+    facts: (facts || []).filter((item) => item.event_cluster_id === cluster.id),
+  })) });
+}
 
 async function listDrafts(req, res) {
   const supabase = getSupabase();
@@ -114,6 +142,11 @@ function buildEvidencePrompt(cluster, articles, facts) {
   const factText = facts.length ? facts.map((f) => `- [${f.fact_type}] ${f.fact_text} | 공식=${f.is_official} | 신뢰=${f.confidence} | ${f.source_url}`).join('\n') : '- 구조화 사실 없음';
   const articleText = articles.map((a) => `- ${a.title}\n  출처: ${a.source_domain} (${a.source_type}, 품질 ${a.quality_score})\n  URL: ${a.url}\n  요약: ${a.summary || '없음'}`).join('\n');
   return `[사건]\n${cluster.representative_title}\n분야: ${cluster.category}\n기준일: ${cluster.event_date || '미상'}\n\n[구조화 사실]\n${factText}\n\n[근거 기사]\n${articleText}`;
+}
+
+function clamp(value, min, max, fallback) {
+  const parsed = Number.parseInt(value, 10);
+  return Number.isFinite(parsed) ? Math.min(max, Math.max(min, parsed)) : fallback;
 }
 
 module.exports.buildEvidencePrompt = buildEvidencePrompt;

@@ -12,3 +12,5 @@ exports/*.csv
 exports/*.md
 !exports/.gitkeep
 *.egg-info/
+
+.vercel
