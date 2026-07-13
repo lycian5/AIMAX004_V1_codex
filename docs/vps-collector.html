@@ -22,14 +22,16 @@
       <h2>수집 조건</h2>
       <div class="checks">
         <label><input type="checkbox" name="source" value="exa" checked /> Exa</label>
+        <label><input type="checkbox" name="source" value="official" checked /> 공식 출처</label>
         <label><input type="checkbox" name="source" value="rss" checked /> RSS</label>
         <label><input type="checkbox" name="source" value="youtube" /> YouTube</label>
         <label><input type="checkbox" name="source" value="github" /> GitHub</label>
       </div>
-      <p class="hint">YouTube와 GitHub는 VPS 인증 설정 후 선택하세요.</p>
+      <p class="hint">공식 출처는 정부·공공기관 도메인으로 제한합니다. YouTube와 GitHub는 VPS 인증 설정 후 선택하세요.</p>
       <div class="grid">
         <div class="field"><label for="limitKeywords">처리할 키워드 수</label><input id="limitKeywords" type="number" min="1" max="30" value="6" /></div>
         <div class="field"><label for="exaResults">Exa 결과 수</label><input id="exaResults" type="number" min="1" max="10" value="5" /></div>
+        <div class="field"><label for="officialResults">공식 출처 결과 수</label><input id="officialResults" type="number" min="1" max="10" value="3" /></div>
         <div class="field"><label for="rssResults">RSS 결과 수</label><input id="rssResults" type="number" min="1" max="20" value="8" /></div>
         <div class="field"><label for="adminKey">실행 인증키</label><input id="adminKey" type="password" autocomplete="off" placeholder="CRON_SECRET" /></div>
       </div>
@@ -59,6 +61,7 @@
             sources,
             limitKeywords: document.getElementById('limitKeywords').value,
             exaResults: document.getElementById('exaResults').value,
+            officialResults: document.getElementById('officialResults').value,
             rssResults: document.getElementById('rssResults').value,
             keywords: document.getElementById('keywords').value,
           }),

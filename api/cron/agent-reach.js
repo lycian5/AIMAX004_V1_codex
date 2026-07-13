@@ -59,7 +59,7 @@ module.exports = async (req, res) => {
 };
 
 function sanitizeOptions(body) {
-  const allowedSources = new Set(['exa', 'rss', 'youtube', 'github']);
+  const allowedSources = new Set(['exa', 'official', 'rss', 'youtube', 'github']);
   const sources = Array.isArray(body.sources)
     ? body.sources.filter((source) => allowedSources.has(source))
     : String(body.sources || '')
@@ -71,6 +71,7 @@ function sanitizeOptions(body) {
   if (sources.length) result.sources = sources.join(',');
   result.limitKeywords = clampInteger(body.limitKeywords, 1, 30, 6);
   result.exaResults = clampInteger(body.exaResults, 1, 10, 5);
+  result.officialResults = clampInteger(body.officialResults, 1, 10, 3);
   result.rssResults = clampInteger(body.rssResults, 1, 20, 8);
   if (typeof body.keywords === 'string' && body.keywords.trim()) {
     result.keywords = body.keywords.trim().slice(0, 500);

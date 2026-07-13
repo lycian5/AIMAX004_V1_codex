@@ -12,6 +12,7 @@ const dryRun = boolArg('dry-run', false);
 const sources = splitList(args.sources || process.env.AGENT_REACH_SOURCES || DEFAULT_SOURCES.join(','));
 const limitKeywords = intArg('limit-keywords', process.env.AGENT_REACH_LIMIT_KEYWORDS, 18);
 const exaResults = intArg('exa-results', process.env.AGENT_REACH_EXA_RESULTS, 5);
+const officialResults = intArg('official-results', process.env.AGENT_REACH_OFFICIAL_RESULTS, 3);
 const youtubeResults = intArg('youtube-results', process.env.AGENT_REACH_YOUTUBE_RESULTS, 3);
 const githubResults = intArg('github-results', process.env.AGENT_REACH_GITHUB_RESULTS, 5);
 const timeoutMs = intArg('timeout-ms', process.env.AGENT_REACH_TIMEOUT_MS, 45000);
@@ -29,10 +30,12 @@ async function main() {
   const limitedKeywords = keywords.slice(0, limitKeywords);
   const allRows = [];
   const failures = [];
+  let factsExtracted = 0;
 
   for (const keyword of limitedKeywords) {
     const collectors = [
       ['exa', collectExa],
+      ['official', collectOfficial],
       ['rss', collectRss],
       ['youtube', collectYoutube],
       ['github', collectGithub],
@@ -50,8 +53,13 @@ async function main() {
   }
 
   const rows = dedupeRows(allRows);
+  let clustersAssigned = 0;
   if (!dryRun && rows.length) {
-    await upsertRawArticles(rows);
+    const savedRows = await upsertRawArticles(rows);
+    clustersAssigned = await assignEventClusters(savedRows);
+    clustersAssigned += await backfillUnclusteredArticles();
+    await backfillMissingClusterDates();
+    factsExtracted = await upsertArticleFacts(savedRows);
     await touchKeywords(rows);
   }
 
@@ -62,6 +70,8 @@ async function main() {
     keywordsProcessed: limitedKeywords.length,
     rowsPrepared: rows.length,
     rowsUpserted: dryRun ? 0 : rows.length,
+    clustersAssigned,
+    factsExtracted,
     failures,
   };
   console.log(JSON.stringify(summary, null, 2));
@@ -87,12 +97,19 @@ async function loadKeywords() {
 }
 
 async function collectExa(keyword) {
-  const query = buildSearchQuery(keyword);
+  return collectExaQuery(keyword, buildSearchQuery(keyword), exaResults, 'agent_reach_exa');
+}
+
+async function collectOfficial(keyword) {
+  return collectExaQuery(keyword, buildOfficialSearchQuery(keyword), officialResults, 'agent_reach_official');
+}
+
+async function collectExaQuery(keyword, query, resultLimit, source) {
   const output = await runCommand('mcporter', [
     'call',
     'exa.web_search_exa',
     '--args',
-    JSON.stringify({ query, numResults: exaResults }),
+    JSON.stringify({ query, numResults: resultLimit }),
     '--output',
     'json',
     '--timeout',
@@ -105,9 +122,10 @@ async function collectExa(keyword) {
   for (const item of content) {
     const result = parseExaText(item.text || '');
     if (!result.url) continue;
+    if (source === 'agent_reach_official' && !isOfficialDomain(result.url)) continue;
     const enriched = await maybeEnrichWithJina(result);
     rows.push(makeRow(keyword, {
-      source: 'agent_reach_exa',
+      source,
       title: enriched.title || result.title,
       url: result.url,
       summary: enriched.summary || result.summary,
@@ -306,16 +324,187 @@ function dedupeRows(rows) {
 
 async function upsertRawArticles(rows) {
   const url = `${requiredEnv('SUPABASE_URL')}/rest/v1/raw_articles?on_conflict=url`;
+  const savedRows = [];
   for (const chunk of chunks(rows, 100)) {
+    const saved = await supabaseRequest(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Prefer: 'resolution=merge-duplicates,return=representation',
+      },
+      body: JSON.stringify(chunk),
+    });
+    savedRows.push(...(saved || []));
+  }
+  return savedRows;
+}
+
+async function assignEventClusters(rows) {
+  if (!rows.length) return 0;
+  const clusters = await loadRecentEventClusters();
+  const affectedIds = new Set();
+
+  for (const row of rows) {
+    let cluster = findMatchingCluster(row, clusters);
+    if (!cluster) {
+      cluster = await createEventCluster(row);
+      clusters.unshift(cluster);
+    }
+    await supabaseRequest(`${requiredEnv('SUPABASE_URL')}/rest/v1/raw_articles?id=eq.${row.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ event_cluster_id: cluster.id }),
+    });
+    row.event_cluster_id = cluster.id;
+    affectedIds.add(cluster.id);
+  }
+
+  for (const clusterId of affectedIds) await refreshEventCluster(clusterId);
+  return rows.length;
+}
+
+async function backfillUnclusteredArticles() {
+  const qs = new URLSearchParams({
+    event_cluster_id: 'is.null',
+    select: 'id,category,title,published_at,collected_at,event_fingerprint,source_type,quality_score',
+    order: 'collected_at.desc',
+    limit: '200',
+  });
+  const rows = await supabaseRequest(`${requiredEnv('SUPABASE_URL')}/rest/v1/raw_articles?${qs.toString()}`);
+  return assignEventClusters(rows);
+}
+
+async function backfillMissingClusterDates() {
+  const qs = new URLSearchParams({
+    event_date: 'is.null',
+    select: 'id',
+    order: 'last_seen_at.desc',
+    limit: '200',
+  });
+  const clusters = await supabaseRequest(`${requiredEnv('SUPABASE_URL')}/rest/v1/event_clusters?${qs.toString()}`);
+  for (const cluster of clusters) await refreshEventCluster(cluster.id);
+}
+
+async function upsertArticleFacts(rows) {
+  const facts = rows.flatMap(extractFacts);
+  if (!facts.length) return 0;
+  const url = `${requiredEnv('SUPABASE_URL')}/rest/v1/article_facts?on_conflict=raw_article_id,fact_text`;
+  for (const chunk of chunks(facts, 100)) {
     await supabaseRequest(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        Prefer: 'resolution=ignore-duplicates,return=minimal',
+        Prefer: 'resolution=merge-duplicates,return=minimal',
       },
       body: JSON.stringify(chunk),
     });
   }
+  return facts.length;
+}
+
+function extractFacts(article) {
+  if (!article?.id || !article.event_cluster_id) return [];
+  const text = cleanText(`${article.title || ''} ${article.summary || ''}`);
+  const official = article.source_type === 'official';
+  const sourceUrl = article.canonical_url || article.url;
+  const candidates = [];
+  collectMatches(candidates, text, /20\d{2}년(?:\s*\d{1,2}월)?(?:\s*\d{1,2}일)?/g, 'date');
+  collectMatches(candidates, text, /\d[\d,.]*\s*(?:조\s*원|억\s*원|만\s*원|원|%|명|건|개|배|년|개월|일)/g, 'number');
+  collectMatches(candidates, text, /["“]([^"”]{8,160})["”]/g, 'quote', 1);
+  collectMatches(candidates, text, /(?:[가-힣A-Za-z0-9·&().-]+\s*){0,3}[가-힣A-Za-z0-9·&().-]{2,}(?:부|청|위원회|공단|진흥원|연구원|협회|재단|대학교|주식회사|Inc\.?|Corp\.?)/g, 'organization');
+
+  const seen = new Set();
+  return candidates.filter((candidate) => {
+    const key = candidate.text;
+    if (candidate.text.length < 2 || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).slice(0, 20).map((candidate) => ({
+    event_cluster_id: article.event_cluster_id,
+    raw_article_id: article.id,
+    fact_text: candidate.text,
+    fact_type: candidate.type,
+    source_url: sourceUrl,
+    is_official: official,
+    confidence: official ? 0.9 : candidate.type === 'quote' ? 0.7 : 0.65,
+    verified_at: official ? new Date().toISOString() : null,
+  }));
+}
+
+function collectMatches(target, text, regex, type, captureIndex = 0) {
+  for (const match of text.matchAll(regex)) {
+    const value = cleanText(match[captureIndex] || '');
+    if (value) target.push({ type, text: value });
+  }
+}
+
+async function loadRecentEventClusters() {
+  const qs = new URLSearchParams({
+    select: 'id,fingerprint,category,representative_title,event_date,last_seen_at',
+    order: 'last_seen_at.desc',
+    limit: '500',
+  });
+  return supabaseRequest(`${requiredEnv('SUPABASE_URL')}/rest/v1/event_clusters?${qs.toString()}`);
+}
+
+function findMatchingCluster(row, clusters) {
+  const exact = clusters.find((cluster) => cluster.fingerprint === row.event_fingerprint);
+  if (exact) return exact;
+  const rowDate = eventDate(row.published_at || row.collected_at);
+  if (!rowDate) return null;
+  return clusters.find((cluster) => {
+    if (cluster.category !== row.category || !cluster.event_date) return false;
+    if (dateDistanceDays(rowDate, cluster.event_date) > 1) return false;
+    return titleSimilarity(row.title, cluster.representative_title) >= 0.55;
+  }) || null;
+}
+
+async function createEventCluster(row) {
+  const data = await supabaseRequest(`${requiredEnv('SUPABASE_URL')}/rest/v1/event_clusters?on_conflict=fingerprint`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Prefer: 'resolution=merge-duplicates,return=representation',
+    },
+    body: JSON.stringify({
+      fingerprint: row.event_fingerprint,
+      category: row.category,
+      representative_title: row.title,
+      event_date: eventDate(row.published_at || row.collected_at),
+      article_count: 0,
+      official_source_count: 0,
+    }),
+  });
+  if (!data?.[0]) throw new Error('사건 클러스터 생성 결과가 없습니다.');
+  return data[0];
+}
+
+async function refreshEventCluster(clusterId) {
+  const qs = new URLSearchParams({
+    event_cluster_id: `eq.${clusterId}`,
+    select: 'title,source_type,quality_score,published_at,collected_at',
+    order: 'quality_score.desc',
+    limit: '1000',
+  });
+  const articles = await supabaseRequest(`${requiredEnv('SUPABASE_URL')}/rest/v1/raw_articles?${qs.toString()}`);
+  if (!articles.length) return;
+  const officialCount = articles.filter((article) => article.source_type === 'official').length;
+  const timestamps = articles.map((article) => article.collected_at).filter(Boolean).sort();
+  const eventDates = articles.map((article) => eventDate(article.published_at || article.collected_at)).filter(Boolean).sort();
+  const ready = articles.length >= 2 && (officialCount > 0 || Number(articles[0].quality_score) >= 70);
+  await supabaseRequest(`${requiredEnv('SUPABASE_URL')}/rest/v1/event_clusters?id=eq.${clusterId}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      representative_title: articles[0].title,
+      event_date: eventDates[0] || null,
+      first_seen_at: timestamps[0],
+      last_seen_at: timestamps[timestamps.length - 1],
+      article_count: articles.length,
+      official_source_count: officialCount,
+      status: ready ? 'ready' : 'developing',
+    }),
+  });
 }
 
 async function touchKeywords(rows) {
@@ -414,6 +603,15 @@ function buildSearchQuery(keyword) {
     policy: 'Korea government support program SME startup policy latest',
   }[keyword.category] || 'latest news';
   return `${keyword.keyword} ${context}`.trim();
+}
+
+function buildOfficialSearchQuery(keyword) {
+  const domains = {
+    ai_business: '(site:msit.go.kr OR site:nipa.kr OR site:kisa.or.kr OR site:korea.kr)',
+    startup: '(site:mss.go.kr OR site:k-startup.go.kr OR site:semas.or.kr OR site:bizinfo.go.kr)',
+    policy: '(site:korea.kr OR site:mss.go.kr OR site:moel.go.kr OR site:bizinfo.go.kr)',
+  }[keyword.category] || '(site:go.kr OR site:korea.kr)';
+  return `${keyword.keyword} ${domains} 최신 공고 발표 자료`.trim();
 }
 
 function normalizeKeyword(raw) {
@@ -532,13 +730,18 @@ function normalizeUrl(value) {
 
 function classifySource(source, url) {
   const domain = hostName(url);
+  if (isOfficialDomain(url)) return { type: 'official', authority: /\.go\.kr$|\.gov(?:\.kr)?$/.test(domain) ? 95 : 90 };
   if (/youtube/i.test(source) || /youtube\.com|youtu\.be/.test(domain)) return { type: 'video', authority: 35 };
   if (/github/i.test(source) || domain === 'github.com') return { type: 'repository', authority: 45 };
   if (/reddit|community|cafe|blog/i.test(source) || /reddit\.com|blog\.naver\.com/.test(domain)) return { type: 'community', authority: 25 };
-  if (/\.go\.kr$|\.gov$|\.gov\.kr$|kosis\.kr$|data\.go\.kr$|dart\.fss\.or\.kr$/.test(domain)) return { type: 'official', authority: 95 };
-  if (/newsroom|press|official/i.test(source)) return { type: 'official', authority: 85 };
+  if (/newsroom|press_release/i.test(source)) return { type: 'official', authority: 85 };
   if (/rss|exa/i.test(source)) return { type: 'media', authority: 55 };
   return { type: 'unknown', authority: 40 };
+}
+
+function isOfficialDomain(url) {
+  const domain = hostName(url);
+  return /\.go\.kr$|\.gov$|\.gov\.kr$|korea\.kr$|kosis\.kr$|data\.go\.kr$|dart\.fss\.or\.kr$|nipa\.kr$|kisa\.or\.kr$|semas\.or\.kr$|bizinfo\.go\.kr$|k-startup\.go\.kr$/.test(domain);
 }
 
 function scoreEvidence(title, summary) {
@@ -567,6 +770,36 @@ function eventFingerprint(title, publishedAt, category) {
     .sort()
     .join(' ');
   return createHash('sha256').update(`${category}|${dateBucket}|${normalizedTitle}`).digest('hex');
+}
+
+function titleSimilarity(left, right) {
+  const leftTokens = titleTokens(left);
+  const rightTokens = titleTokens(right);
+  if (leftTokens.size < 2 || rightTokens.size < 2) return 0;
+  const intersection = [...leftTokens].filter((token) => rightTokens.has(token)).length;
+  if (intersection < 2) return 0;
+  return intersection / Math.min(leftTokens.size, rightTokens.size);
+}
+
+function titleTokens(value) {
+  const stopWords = new Set(['관련', '대한', '위한', '통해', '뉴스', '속보', '단독', '발표', '공개', '밝혀']);
+  return new Set(cleanText(value)
+    .toLowerCase()
+    .replace(/[^0-9a-z가-힣\s]/g, ' ')
+    .split(/\s+/)
+    .filter((token) => token.length > 1 && !stopWords.has(token)));
+}
+
+function eventDate(value) {
+  const iso = toIsoOrNull(value);
+  return iso ? iso.slice(0, 10) : null;
+}
+
+function dateDistanceDays(left, right) {
+  const leftTime = Date.parse(`${left}T00:00:00Z`);
+  const rightTime = Date.parse(`${right}T00:00:00Z`);
+  if (!Number.isFinite(leftTime) || !Number.isFinite(rightTime)) return Number.POSITIVE_INFINITY;
+  return Math.abs(leftTime - rightTime) / 86400000;
 }
 
 function toIsoOrNull(value) {
@@ -601,9 +834,15 @@ function requiredEnv(name) {
 }
 
 module.exports = {
+  buildOfficialSearchQuery,
   classifySource,
+  dateDistanceDays,
   eventFingerprint,
+  extractFacts,
+  isOfficialDomain,
+  findMatchingCluster,
   normalizeUrl,
   scoreEvidence,
   scoreQuality,
+  titleSimilarity,
 };

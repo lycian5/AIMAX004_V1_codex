@@ -78,6 +78,7 @@ function buildCollectorArgs(body) {
     'sources',
     'limit-keywords',
     'exa-results',
+    'official-results',
     'youtube-results',
     'github-results',
     'rss-results',

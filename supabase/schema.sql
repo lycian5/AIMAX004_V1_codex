@@ -48,12 +48,18 @@ create table if not exists event_clusters (
   fingerprint text not null unique,
   category text not null check (category in ('ai_business', 'startup', 'policy')),
   representative_title text not null,
+  event_date date,
   first_seen_at timestamptz not null default now(),
   last_seen_at timestamptz not null default now(),
   article_count int not null default 1,
   official_source_count int not null default 0,
   status text not null default 'developing' check (status in ('developing', 'ready', 'archived'))
 );
+
+alter table raw_articles
+  add column if not exists event_cluster_id bigint references event_clusters(id) on delete set null;
+
+create index if not exists raw_articles_event_cluster_idx on raw_articles(event_cluster_id);
 
 create table if not exists article_facts (
   id bigint generated always as identity primary key,
