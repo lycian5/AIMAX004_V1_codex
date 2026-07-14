@@ -1,0 +1,18 @@
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+
+const endpoint = fs.readFileSync(require.resolve('../api/editorial/drafts'), 'utf8');
+const dashboard = fs.readFileSync(require.resolve('../docs/vps-collector.html'), 'utf8');
+
+assert.match(endpoint, /assertCronAuth/);
+assert.match(endpoint, /selectHybridKeywords/);
+assert.match(endpoint, /datalab_priority/);
+assert.match(endpoint, /core: selected\.slice/);
+assert.match(endpoint, /rotating: selected\.slice/);
+assert.match(dashboard, /핵심 키워드 4개/);
+assert.match(dashboard, /오늘의 유동 키워드 2개/);
+assert.match(endpoint, /view === 'keywords'/);
+assert.match(dashboard, /\/api\/editorial\/drafts\?view=keywords/);
+assert.match(dashboard, /Authorization: `Bearer \$\{key\}`/);
+
+process.stdout.write('Keyword dashboard checks passed.\n');

@@ -19,7 +19,15 @@ function selectHybridKeywords(keywords, options = {}) {
   if (!rotatingCount) return core;
 
   const date = options.date instanceof Date ? options.date : new Date(options.date || Date.now());
-  const day = Math.floor(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()) / 86400000);
+  const utcOffsetMinutes = Number.isFinite(Number(options.utcOffsetMinutes))
+    ? Number(options.utcOffsetMinutes)
+    : 540;
+  const localDate = new Date(date.getTime() + utcOffsetMinutes * 60000);
+  const day = Math.floor(Date.UTC(
+    localDate.getUTCFullYear(),
+    localDate.getUTCMonth(),
+    localDate.getUTCDate()
+  ) / 86400000);
   const start = (day * rotatingCount) % pool.length;
   const rotating = Array.from({ length: rotatingCount }, (_, index) => pool[(start + index) % pool.length]);
   return [...core, ...rotating];

@@ -12,7 +12,8 @@
     input,textarea{width:100%;border:1px solid #bdcbd2;border-radius:5px;padding:10px;font:inherit}textarea{min-height:95px;resize:vertical}.checks{display:flex;gap:18px;flex-wrap:wrap}.checks label{font-size:14px}.checks input{width:auto}
     .hint{font-size:12px;color:#5f6f78;margin-top:6px}.actions{display:flex;gap:10px;align-items:center}.btn{border:0;border-radius:5px;padding:11px 18px;font-weight:700;cursor:pointer}.primary{background:#087ea4;color:#fff}.btn:disabled{opacity:.55;cursor:wait}
     pre{white-space:pre-wrap;word-break:break-word;background:#111b22;color:#d9edf4;padding:15px;border-radius:6px;min-height:100px}.ok{color:#087a43}.error{color:#b42318}
-    @media(max-width:640px){.grid{grid-template-columns:1fr}}
+    .keyword-summary{margin:14px 0;padding:14px;border:1px solid #dce4e8;border-radius:6px;background:#f8fafb}.keyword-head{display:flex;align-items:center;justify-content:space-between;gap:12px}.keyword-head strong{font-size:14px}.keyword-groups{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}.keyword-group{padding:12px;background:#fff;border:1px solid #dce4e8;border-radius:6px}.keyword-group h3{font-size:13px;margin:0 0 9px}.keyword-list{display:flex;gap:7px;flex-wrap:wrap}.keyword-chip{padding:6px 9px;border-radius:4px;background:#e5f4f9;color:#075f7d;font-size:13px;font-weight:700}.keyword-chip.rotating{background:#fff1d6;color:#8a5200}
+    @media(max-width:640px){.grid,.keyword-groups{grid-template-columns:1fr}}
   </style>
 </head>
 <body>
@@ -28,6 +29,14 @@
         <label><input type="checkbox" name="source" value="github" /> GitHub</label>
       </div>
       <p class="hint">공식 출처는 정부·공공기관 도메인으로 제한합니다. YouTube와 GitHub는 VPS 인증 설정 후 선택하세요.</p>
+      <div class="keyword-summary">
+        <div class="keyword-head"><strong>자동 수집 키워드</strong><button id="loadKeywords" class="btn" type="button">키워드 확인</button></div>
+        <div class="keyword-groups">
+          <div class="keyword-group"><h3>핵심 키워드 4개</h3><div id="coreKeywords" class="keyword-list"><span class="hint">인증키 입력 후 확인하세요.</span></div></div>
+          <div class="keyword-group"><h3>오늘의 유동 키워드 2개</h3><div id="rotatingKeywords" class="keyword-list"><span class="hint">매일 자동으로 변경됩니다.</span></div></div>
+        </div>
+        <p id="keywordDate" class="hint">직접 키워드를 입력하면 위 자동 선택 대신 입력한 키워드를 사용합니다.</p>
+      </div>
       <div class="grid">
         <div class="field"><label for="limitKeywords">처리할 키워드 수</label><input id="limitKeywords" type="number" min="1" max="30" value="6" /></div>
         <div class="field"><label for="exaResults">Exa 결과 수</label><input id="exaResults" type="number" min="1" max="10" value="5" /></div>
@@ -46,6 +55,24 @@
     const run = document.getElementById('run');
     const status = document.getElementById('status');
     const result = document.getElementById('result');
+    const loadKeywords = document.getElementById('loadKeywords');
+    loadKeywords.addEventListener('click', async () => {
+      const key = document.getElementById('adminKey').value.trim();
+      if (!key) return showKeywordError('실행 인증키를 먼저 입력하세요.');
+      loadKeywords.disabled = true;
+      try {
+        const limit = document.getElementById('limitKeywords').value;
+        const response = await fetch(`/api/editorial/drafts?view=keywords&limitKeywords=${encodeURIComponent(limit)}`, {
+          headers: {Authorization: `Bearer ${key}`},
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
+        renderKeywords('coreKeywords', data.core, false);
+        renderKeywords('rotatingKeywords', data.rotating, true);
+        document.getElementById('keywordDate').textContent = `${data.date} 기준 · 직접 키워드를 입력하면 자동 선택 대신 입력값을 사용합니다.`;
+      } catch (error) { showKeywordError(error.message); }
+      finally { loadKeywords.disabled = false; }
+    });
     run.addEventListener('click', async () => {
       const key = document.getElementById('adminKey').value.trim();
       const sources = [...document.querySelectorAll('[name=source]:checked')].map(el => el.value);
@@ -76,6 +103,17 @@
       } catch (error) { show(error.message, false); }
       finally { run.disabled = false; }
     });
+    function renderKeywords(id, keywords, rotating) {
+      const target = document.getElementById(id);
+      target.innerHTML = keywords.length
+        ? keywords.map(item => `<span class="keyword-chip${rotating ? ' rotating' : ''}" title="${escapeHtml(item.category || '')}">${escapeHtml(item.keyword)}</span>`).join('')
+        : '<span class="hint">선택된 키워드가 없습니다.</span>';
+    }
+    function showKeywordError(message) {
+      document.getElementById('coreKeywords').innerHTML = `<span class="error">${escapeHtml(message)}</span>`;
+      document.getElementById('rotatingKeywords').innerHTML = '<span class="hint">불러오지 못했습니다.</span>';
+    }
+    function escapeHtml(value) { return String(value || '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char])); }
     function show(message, ok) { status.textContent = ok ? '완료' : '실패'; status.className = ok ? 'ok' : 'error'; result.textContent = message; }
   </script>
 </body>

@@ -2,6 +2,7 @@ const { getSupabase } = require('../lib/supabase');
 const { assertCronAuth } = require('../lib/cronAuth');
 const { getOpenAI } = require('../lib/openai');
 const { resolveOpenAIModel } = require('../lib/openaiModels');
+const { selectHybridKeywords } = require('../../scripts/keyword-selection');
 
 const DRAFT_SCHEMA = {
   type: 'object',
@@ -20,6 +21,7 @@ module.exports = async (req, res) => {
   try { assertCronAuth(req); } catch (err) { res.status(err.statusCode || 401).json({ error: err.message }); return; }
   try {
     if (req.method === 'GET' && req.query?.view === 'briefs') return listBriefs(req, res);
+    if (req.method === 'GET' && req.query?.view === 'keywords') return listKeywords(req, res);
     if (req.method === 'GET') return listDrafts(req, res);
     if (req.method === 'POST') return generateDraft(req, res);
     if (req.method === 'PATCH') return updateDraft(req, res);
@@ -29,6 +31,39 @@ module.exports = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+async function listKeywords(req, res) {
+  const supabase = getSupabase();
+  const limitKeywords = clamp(
+    req.query?.limitKeywords,
+    1,
+    30,
+    Number(process.env.AGENT_REACH_LIMIT_KEYWORDS || 6)
+  );
+  const coreKeywordCount = Number(process.env.AGENT_REACH_CORE_KEYWORDS || 4);
+  const rotatingKeywordCount = Number(process.env.AGENT_REACH_ROTATING_KEYWORDS || 2);
+  const { data: keywords, error } = await supabase
+    .from('tracked_keywords')
+    .select('id, keyword, category, datalab_priority')
+    .eq('status', 'active')
+    .order('datalab_priority', { ascending: true })
+    .order('id', { ascending: true });
+  if (error) throw error;
+
+  const selected = selectHybridKeywords(keywords || [], {
+    limitKeywords,
+    coreKeywordCount,
+    rotatingKeywordCount,
+    date: new Date(),
+  });
+  const coreCount = Math.min(coreKeywordCount, selected.length);
+  const koreaDate = new Date(Date.now() + 9 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  res.status(200).json({
+    date: koreaDate,
+    core: selected.slice(0, coreCount),
+    rotating: selected.slice(coreCount),
+  });
+}
 
 async function listBriefs(req, res) {
   const supabase = getSupabase();
