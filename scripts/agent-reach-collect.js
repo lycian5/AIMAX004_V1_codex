@@ -4,8 +4,12 @@
 const { spawn } = require('node:child_process');
 const { createHash } = require('node:crypto');
 const { selectHybridKeywords } = require('./keyword-selection');
+const {
+  VALID_CATEGORIES,
+  buildOfficialSearchQuery: buildLayeredOfficialSearchQuery,
+  buildSearchQuery: buildLayeredSearchQuery,
+} = require('./research-query-taxonomy');
 
-const VALID_CATEGORIES = new Set(['ai_business', 'startup', 'policy']);
 const DEFAULT_SOURCES = ['exa', 'official', 'rss'];
 const rssFeedCache = new Map();
 
@@ -108,14 +112,14 @@ async function loadKeywords() {
 }
 
 async function collectExa(keyword) {
-  return collectExaQuery(keyword, buildSearchQuery(keyword), exaResults, 'agent_reach_exa');
+  return collectExaQuery(keyword, buildLayeredSearchQuery(keyword, 'precision'), exaResults, 'agent_reach_exa', 'precision', 'signal');
 }
 
 async function collectOfficial(keyword) {
-  return collectExaQuery(keyword, buildOfficialSearchQuery(keyword), officialResults, 'agent_reach_official');
+  return collectExaQuery(keyword, buildLayeredOfficialSearchQuery(keyword), officialResults, 'agent_reach_official', 'verification', 'official');
 }
 
-async function collectExaQuery(keyword, query, resultLimit, source) {
+async function collectExaQuery(keyword, query, resultLimit, source, queryStage, sourceLayer) {
   const output = await runCommand('mcporter', [
     'call',
     'exa.web_search_exa',
@@ -141,6 +145,8 @@ async function collectExaQuery(keyword, query, resultLimit, source) {
       url: result.url,
       summary: enriched.summary || result.summary,
       published_at: result.published_at,
+      query_stage: queryStage,
+      source_layer: sourceLayer,
     }));
   }
   return rows;
@@ -162,6 +168,8 @@ async function collectYoutube(keyword) {
       url: item.webpage_url || item.url,
       summary: item.description || item.channel || null,
       published_at: yyyymmddToIso(item.upload_date),
+      query_stage: 'explore',
+      source_layer: 'signal',
     }));
 }
 
@@ -185,6 +193,8 @@ async function collectGithub(keyword) {
     url: repo.url,
     summary: repo.description || null,
     published_at: repo.updatedAt || null,
+    query_stage: 'precision',
+    source_layer: 'signal',
   }));
 }
 
@@ -205,6 +215,8 @@ async function collectRss(keyword) {
           url: entry.url,
           summary: entry.summary,
           published_at: entry.published_at,
+          query_stage: 'explore',
+          source_layer: isOfficialDomain(entry.url) ? 'official' : 'signal',
         }));
       }
     } catch (err) {
@@ -310,6 +322,8 @@ function makeRow(keyword, item) {
     evidence_score: evidenceScore,
     quality_score: scoreQuality(sourceProfile.authority, evidenceScore, publishedAt),
     verification_status: sourceProfile.type === 'official' ? 'verified' : 'needs_verification',
+    query_stage: item.query_stage || 'explore',
+    source_layer: item.source_layer || (sourceProfile.type === 'official' ? 'official' : 'signal'),
     event_fingerprint: eventFingerprint(title, publishedAt, category),
     last_checked_at: new Date().toISOString(),
   };

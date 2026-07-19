@@ -9,6 +9,7 @@
     "test:agent-reach": "node tests/test_agent_reach_options.js",
     "test:agent-reach-runner": "node tests/test_agent_reach_runner.js",
     "test:research-metadata": "node tests/test_research_metadata.js",
+    "test:research-taxonomy": "node tests/test_research_query_taxonomy.js",
     "test:research-briefs": "node tests/test_research_briefs.js",
     "test:editorial-workflow": "node tests/test_editorial_workflow.js",
     "test:ops-health": "node tests/test_ops_health.js",

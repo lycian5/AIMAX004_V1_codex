@@ -4,7 +4,7 @@
 create table if not exists tracked_keywords (
   id bigint generated always as identity primary key,
   keyword text not null,
-  category text not null check (category in ('ai_business', 'startup', 'policy')),
+  category text not null check (category in ('ai_business', 'startup', 'policy', 'small_business_economy', 'local_commerce', 'marketing_distribution', 'field_issue')),
   tier text not null default 'seed' check (tier in ('seed', 'expanded', 'issue')),
   status text not null default 'active' check (status in ('active', 'retired')),
   datalab_priority int not null default 3,
@@ -17,7 +17,7 @@ create table if not exists tracked_keywords (
 create table if not exists raw_articles (
   id bigint generated always as identity primary key,
   keyword_id bigint references tracked_keywords(id) on delete set null,
-  category text not null check (category in ('ai_business', 'startup', 'policy')),
+  category text not null check (category in ('ai_business', 'startup', 'policy', 'small_business_economy', 'local_commerce', 'marketing_distribution', 'field_issue')),
   source text not null,
   title text not null,
   url text not null unique,
@@ -31,6 +31,8 @@ create table if not exists raw_articles (
   evidence_score smallint not null default 0 check (evidence_score between 0 and 100),
   quality_score smallint not null default 0 check (quality_score between 0 and 100),
   verification_status text not null default 'unverified' check (verification_status in ('unverified', 'needs_verification', 'verified', 'rejected')),
+  query_stage text not null default 'explore' check (query_stage in ('explore', 'precision', 'verification')),
+  source_layer text not null default 'signal' check (source_layer in ('signal', 'official', 'data')),
   event_fingerprint text,
   last_checked_at timestamptz not null default now()
 );
@@ -42,11 +44,13 @@ create index if not exists raw_articles_canonical_url_idx on raw_articles(canoni
 create index if not exists raw_articles_event_fingerprint_idx on raw_articles(event_fingerprint);
 create index if not exists raw_articles_quality_score_idx on raw_articles(quality_score desc);
 create index if not exists raw_articles_verification_status_idx on raw_articles(verification_status);
+create index if not exists raw_articles_query_stage_idx on raw_articles(query_stage);
+create index if not exists raw_articles_source_layer_idx on raw_articles(source_layer);
 
 create table if not exists event_clusters (
   id bigint generated always as identity primary key,
   fingerprint text not null unique,
-  category text not null check (category in ('ai_business', 'startup', 'policy')),
+  category text not null check (category in ('ai_business', 'startup', 'policy', 'small_business_economy', 'local_commerce', 'marketing_distribution', 'field_issue')),
   representative_title text not null,
   event_date date,
   first_seen_at timestamptz not null default now(),
