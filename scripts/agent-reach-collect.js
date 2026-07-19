@@ -6,15 +6,16 @@ const { createHash } = require('node:crypto');
 const { selectHybridKeywords } = require('./keyword-selection');
 
 const VALID_CATEGORIES = new Set(['ai_business', 'startup', 'policy']);
-const DEFAULT_SOURCES = ['exa', 'rss', 'youtube', 'github'];
+const DEFAULT_SOURCES = ['exa', 'official', 'rss'];
+const rssFeedCache = new Map();
 
 const args = parseArgs(process.argv.slice(2));
 const dryRun = boolArg('dry-run', false);
 const sources = splitList(args.sources || process.env.AGENT_REACH_SOURCES || DEFAULT_SOURCES.join(','));
 const inlineKeywords = splitList(args.keywords || process.env.AGENT_REACH_KEYWORDS || '');
-const limitKeywords = intArg('limit-keywords', process.env.AGENT_REACH_LIMIT_KEYWORDS, 18);
-const coreKeywordCount = intArg('core-keywords', process.env.AGENT_REACH_CORE_KEYWORDS, 4);
-const rotatingKeywordCount = intArg('rotating-keywords', process.env.AGENT_REACH_ROTATING_KEYWORDS, 2);
+const limitKeywords = intArg('limit-keywords', process.env.AGENT_REACH_LIMIT_KEYWORDS, 54);
+const coreKeywordCount = intArg('core-keywords', process.env.AGENT_REACH_CORE_KEYWORDS, 12);
+const rotatingKeywordCount = intArg('rotating-keywords', process.env.AGENT_REACH_ROTATING_KEYWORDS, 42);
 const exaResults = intArg('exa-results', process.env.AGENT_REACH_EXA_RESULTS, 5);
 const officialResults = intArg('official-results', process.env.AGENT_REACH_OFFICIAL_RESULTS, 3);
 const youtubeResults = intArg('youtube-results', process.env.AGENT_REACH_YOUTUBE_RESULTS, 3);
@@ -194,10 +195,7 @@ async function collectRss(keyword) {
 
   for (const feed of matchingFeeds) {
     try {
-      const res = await fetchWithTimeout(feed.url, timeoutMs);
-      if (!res.ok) throw new Error(`RSS HTTP ${res.status}: ${feed.url}`);
-      const xml = await res.text();
-      const entries = parseRssEntries(xml).slice(0, intArg('rss-results', process.env.AGENT_REACH_RSS_RESULTS, 8));
+      const entries = await loadRssEntries(feed);
       for (const entry of entries) {
         if (!entry.url || !entry.title) continue;
         if (!matchesKeyword(entry, keyword)) continue;
@@ -215,6 +213,18 @@ async function collectRss(keyword) {
   }
 
   return rows.filter((row) => !row.skip);
+}
+
+function loadRssEntries(feed) {
+  if (!rssFeedCache.has(feed.url)) {
+    rssFeedCache.set(feed.url, (async () => {
+      const res = await fetchWithTimeout(feed.url, timeoutMs);
+      if (!res.ok) throw new Error(`RSS HTTP ${res.status}: ${feed.url}`);
+      const xml = await res.text();
+      return parseRssEntries(xml).slice(0, intArg('rss-results', process.env.AGENT_REACH_RSS_RESULTS, 8));
+    })());
+  }
+  return rssFeedCache.get(feed.url);
 }
 
 function parseRssEntries(xml) {
@@ -378,7 +388,7 @@ async function backfillUnclusteredArticles() {
     event_cluster_id: 'is.null',
     select: 'id,category,title,published_at,collected_at,event_fingerprint,source_type,quality_score',
     order: 'collected_at.desc',
-    limit: '200',
+    limit: '1000',
   });
   const rows = await supabaseRequest(`${requiredEnv('SUPABASE_URL')}/rest/v1/raw_articles?${qs.toString()}`);
   return assignEventClusters(rows);

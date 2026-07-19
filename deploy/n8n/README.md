@@ -1,71 +1,35 @@
-# n8n 운영 배포
+# n8n VPS 배포 및 운영
 
-Vultr Ubuntu 24.04의 `/opt/n8n`에 Postgres 16, n8n latest, Agent Reach runner, Caddy와 암호화 백업을 설치합니다. n8n은 `127.0.0.1:5678`에만 바인딩하며 외부에서는 Caddy의 80/443만 사용합니다.
+Vultr Ubuntu 24.04의 `/opt/n8n`에 Postgres 16, n8n `2.30.7`, Agent Reach runner, Caddy와 암호화 백업을 배포합니다. n8n은 `127.0.0.1:5678`에만 바인딩하며 외부에서는 Caddy의 80/443만 사용합니다.
 
-## 현재 선행 조건
+운영 수집 기준은 [`../../docs/OPERATING_STANDARD.md`](../../docs/OPERATING_STANDARD.md)를 따릅니다.
 
-- VPS: `158.247.245.66`
-- 도메인: `n8n.coanews.co.kr`
-- DNS 관리 주체: 신문 플랫폼의 DNSZi 네임서버
-- 플랫폼에 요청할 A 레코드: `n8n.coanews.co.kr -> 158.247.245.66`
-- Windows OpenSSH Client와 VPS root SSH 로그인 수단
+## 배포 전 준비
 
-DNS가 아직 없어도 배포할 수 있습니다. 이 경우 n8n과 백업은 시작되고 Caddy HTTPS 적용만 건너뜁니다. DNS 반영 후 같은 스크립트를 다시 실행하면 HTTPS가 활성화됩니다.
+1. DNS A 레코드 `n8n.coanews.co.kr -> 158.247.245.66`을 확인합니다.
+2. Windows OpenSSH로 `root@158.247.245.66` 접속이 되는지 확인합니다.
+3. 이 폴더에서 `.env.example`을 `.env`로 복사하고 값을 채웁니다.
+4. `POSTGRES_PASSWORD`, `N8N_ENCRYPTION_KEY`, `AGENT_REACH_RUNNER_SECRET`, `AGENT_REACH_WEBHOOK_SECRET`, `BACKUP_ENCRYPTION_PASSWORD`는 서로 다른 강한 값으로 설정합니다.
+5. `.env`와 백업 암호는 Git에 커밋하지 않습니다.
 
-## Windows 배포
+Agent Reach의 기본 운영값은 Exa, 공식 출처, RSS를 이용해 활성 키워드 54개를 처리합니다. 핵심 12개는 매회 포함하고 나머지 42개는 확장 키워드 풀에서 순환합니다. YouTube와 GitHub는 각각 인증과 쿠키 설정을 마친 뒤 선택적으로 추가합니다.
+
+## Windows 자동 배포
 
 ```powershell
 cd C:\Users\user\Documents\aimax004_v1_codex\deploy\n8n
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\deploy.ps1
 ```
 
-첫 실행에 `.env`가 없으면 `.env.example`을 복사하고 종료합니다. `.env`의 `POSTGRES_PASSWORD`를 직접 입력한 뒤 다시 실행하십시오. 이후 스크립트가 비어 있는 다음 값을 암호학적 난수로 생성합니다.
-
-- `N8N_ENCRYPTION_KEY`
-- `AGENT_REACH_RUNNER_SECRET`, `AGENT_REACH_WEBHOOK_SECRET`
-- `BACKUP_ENCRYPTION_PASSWORD`
-
-`.env`는 Git에 포함되지 않습니다. 생성된 값은 별도 비밀번호 관리자에도 보관하십시오. `N8N_ENCRYPTION_KEY`를 잃으면 n8n 자격 증명을 복호화할 수 없고, 백업 암호를 잃으면 백업을 복원할 수 없습니다.
-
-VPS에 접속하지 않고 로컬 비밀값만 먼저 준비할 수도 있습니다.
+첫 실행에서 `.env`가 없으면 스크립트가 `.env.example`을 복사하고 종료합니다. 값을 수정한 뒤 같은 명령을 다시 실행합니다. 로컬 설정만 먼저 만들려면 다음을 사용합니다.
 
 ```powershell
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\deploy.ps1 -PrepareOnly
 ```
 
-배포 스크립트는 Docker와 Caddy를 설치하고, UFW에서 OpenSSH/80/443만 허용하며, Agent Reach systemd 서비스와 일일 백업 타이머를 등록합니다. `5678`과 `8787`은 외부 방화벽에 열지 않습니다.
+배포 스크립트는 Docker와 Caddy 설치 여부를 확인하고, UFW에서 OpenSSH, 80, 443만 허용합니다. 5678과 Agent Reach runner의 8787은 외부 방화벽에 열지 않습니다.
 
-기본 수집 채널은 `exa,official,rss`입니다. GitHub를 추가하려면 VPS에서 `gh auth login` 또는 `GH_TOKEN`을 설정하고, YouTube를 추가하려면 `yt-dlp`용 쿠키를 별도로 설정한 뒤 `AGENT_REACH_SOURCES`에 `github`, `youtube`를 추가하세요.
-
-운영 헬스체크는 15분마다 n8n, PostgreSQL, Agent Reach, HTTPS, 최근 암호화 백업을 확인합니다. `.env`에 `SLACK_WEBHOOK_URL`을 설정하면 장애 발생 시 Slack으로 알립니다. `SUPABASE_DB_URL`을 설정하면 일일 암호화 백업에 Supabase PostgreSQL 덤프도 포함됩니다.
-
-## DNS 전 임시 접속
-
-Windows에서 SSH 터널을 유지한 상태로 로컬 브라우저를 엽니다.
-
-```powershell
-ssh -L 5678:127.0.0.1:5678 root@158.247.245.66
-```
-
-```text
-http://127.0.0.1:5678
-```
-
-VPS IP의 `:5678`로 직접 접속하는 방식은 사용하지 않습니다.
-
-## DNS 및 HTTPS 확인
-
-신문 플랫폼이 DNSZi에 A 레코드를 추가한 뒤 확인합니다.
-
-```powershell
-Resolve-DnsName n8n.coanews.co.kr
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\deploy.ps1
-curl.exe -I https://n8n.coanews.co.kr
-```
-
-정상 접속 주소는 `https://n8n.coanews.co.kr`입니다.
-
-## 운영 점검
+## 설치 후 확인
 
 ```bash
 cd /opt/n8n
@@ -76,14 +40,31 @@ systemctl status coa-n8n-backup.timer --no-pager
 journalctl -u caddy -n 100 --no-pager
 ```
 
-## 백업과 복구
+정상 접속 주소는 `https://n8n.coanews.co.kr`입니다. DNS가 아직 반영되지 않았으면 다음 SSH 터널로만 임시 접속합니다.
 
-VPS는 매일 02:10(Asia/Seoul)에 다음을 `/opt/backups/coa-n8n`에 암호화하여 보관합니다.
+```powershell
+ssh -L 5678:127.0.0.1:5678 root@158.247.245.66
+```
 
-- n8n Postgres dump
-- n8n 데이터 볼륨
-- Docker/Caddy 설정과 `.env`
-- `SUPABASE_DB_URL`이 설정된 경우 Supabase Postgres dump
+브라우저에서 `http://127.0.0.1:5678`을 엽니다. VPS IP의 5678 포트로 직접 접속하지 않습니다.
+
+## 수집 운영
+
+- Vercel 기본 수집: 매일 06:00 KST, Naver와 Google 중심, 18개 키워드
+- VPS Agent Reach: 매일 06:30 KST, Exa, 공식 출처, RSS, 54개 키워드
+- 소재 정리: 매일 07:00 KST, 중복 제거, 점수화, 클러스터 및 브리프 생성
+- AI는 원시 수집에 사용하지 않고 선택된 브리프의 200~1600자 맥락 요약에만 사용
+- `n8n/workflow_collect.json`과 `n8n/workflow_suggest.json`은 보관용이며 활성화하지 않음
+
+`workflow_agent_reach_collect.json`을 n8n에 import한 경우 환경변수를 확인한 뒤 이 워크플로만 명시적으로 활성화합니다.
+
+## 백업과 복원
+
+VPS는 매일 02:10 KST에 `/opt/backups/coa-n8n`으로 다음 항목을 암호화해 보관합니다.
+
+- n8n Postgres dump와 데이터 볼륨
+- Docker, Caddy 및 `.env` 설정
+- `SUPABASE_DB_URL`이 있으면 Supabase PostgreSQL dump
 
 수동 백업:
 
@@ -91,17 +72,15 @@ VPS는 매일 02:10(Asia/Seoul)에 다음을 `/opt/backups/coa-n8n`에 암호화
 sudo /opt/n8n/backup.sh
 ```
 
-복구는 실행 직전 안전 백업을 하나 더 만든 후 진행합니다.
+복원 시험은 운영 복원과 같은 절차로 수행하되 최신 백업 하나를 지정합니다.
 
 ```bash
 sudo /opt/n8n/restore.sh /opt/backups/coa-n8n/coa-n8n-YYYYMMDD-HHMMSS.tar.gz.enc RESTORE
 ```
 
-DS220j 연계 절차는 `nas/README.md`를 따릅니다. NAS가 VPS의 암호화 파일을 가져오는 pull 방식이므로 NAS 포트를 인터넷에 공개하지 않습니다.
+DS220j 연계는 [`nas/README.md`](nas/README.md)를 따릅니다. NAS가 VPS에서 백업 파일을 가져오는 pull 방식이므로 NAS 포트를 인터넷에 공개하지 않습니다.
 
 ## 수동 설치 핵심 명령
-
-자동 스크립트를 쓰지 않을 경우에도 Ubuntu 24.04에 Docker Compose를 설치한 뒤 아래 순서를 사용합니다.
 
 ```bash
 mkdir -p /opt/n8n
@@ -112,5 +91,3 @@ caddy validate --config /etc/caddy/Caddyfile
 systemctl reload caddy
 docker ps
 ```
-
-Caddy 적용은 DNS가 `158.247.245.66`으로 확인된 뒤 수행해야 합니다.

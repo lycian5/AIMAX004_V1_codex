@@ -2,7 +2,7 @@
   "name": "aimax-004-v1-codex",
   "version": "0.1.0",
   "private": true,
-  "description": "Standalone policy article collector static UI for Vercel.",
+  "description": "High-volume news material collection, scoring, research brief, and editorial context pipeline.",
   "scripts": {
     "start": "python -m http.server 8080 -d docs",
     "test:models": "node tests/test_openai_models.js",

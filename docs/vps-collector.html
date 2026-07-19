@@ -32,13 +32,13 @@
       <div class="keyword-summary">
         <div class="keyword-head"><strong>자동 수집 키워드</strong><button id="loadKeywords" class="btn" type="button">키워드 확인</button></div>
         <div class="keyword-groups">
-          <div class="keyword-group"><h3>핵심 키워드 4개</h3><div id="coreKeywords" class="keyword-list"><span class="hint">인증키 입력 후 확인하세요.</span></div></div>
-          <div class="keyword-group"><h3>오늘의 유동 키워드 2개</h3><div id="rotatingKeywords" class="keyword-list"><span class="hint">매일 자동으로 변경됩니다.</span></div></div>
+          <div class="keyword-group"><h3 id="coreKeywordTitle">핵심 키워드 12개</h3><div id="coreKeywords" class="keyword-list"><span class="hint">로그인 후 확인하세요.</span></div></div>
+          <div class="keyword-group"><h3 id="rotatingKeywordTitle">순환 키워드 42개</h3><div id="rotatingKeywords" class="keyword-list"><span class="hint">전체 시드를 넓게 수집합니다.</span></div></div>
         </div>
         <p id="keywordDate" class="hint">직접 키워드를 입력하면 위 자동 선택 대신 입력한 키워드를 사용합니다.</p>
       </div>
       <div class="grid">
-        <div class="field"><label for="limitKeywords">처리할 키워드 수</label><input id="limitKeywords" type="number" min="1" max="30" value="6" /></div>
+        <div class="field"><label for="limitKeywords">처리할 키워드 수</label><input id="limitKeywords" type="number" min="1" max="100" value="54" /></div>
         <div class="field"><label for="exaResults">Exa 결과 수</label><input id="exaResults" type="number" min="1" max="10" value="5" /></div>
         <div class="field"><label for="officialResults">공식 출처 결과 수</label><input id="officialResults" type="number" min="1" max="10" value="3" /></div>
         <div class="field"><label for="rssResults">RSS 결과 수</label><input id="rssResults" type="number" min="1" max="20" value="8" /></div>
@@ -66,6 +66,8 @@
         if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
         renderKeywords('coreKeywords', data.core, false);
         renderKeywords('rotatingKeywords', data.rotating, true);
+        document.getElementById('coreKeywordTitle').textContent = `핵심 키워드 ${data.core.length}개`;
+        document.getElementById('rotatingKeywordTitle').textContent = `순환 키워드 ${data.rotating.length}개`;
         document.getElementById('keywordDate').textContent = `${data.date} 기준 · 직접 키워드를 입력하면 자동 선택 대신 입력값을 사용합니다.`;
       } catch (error) { showKeywordError(error.message); }
       finally { loadKeywords.disabled = false; }

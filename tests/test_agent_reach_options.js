@@ -6,6 +6,8 @@ assert.match(source, /allowedSources/);
 assert.match(source, /'official'/);
 assert.match(source, /officialResults/);
 assert.match(source, /limitKeywords/);
+assert.match(source, /AGENT_REACH_LIMIT_KEYWORDS \|\| 54/);
+assert.match(source, /rssResults, 1, 20, 8/);
 assert.match(source, /async: req\.method === 'POST'/);
 assert.doesNotMatch(source, /\.\.\.req\.body/);
 process.stdout.write('Agent Reach option forwarding checks passed.\n');

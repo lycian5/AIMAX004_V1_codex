@@ -1,5 +1,6 @@
 {
-  "name": "COA NEWS — 소재 추천 (Suggest)",
+  "name": "[보관] COA NEWS - 구형 소재 추천",
+  "active": false,
   "nodes": [
     {
       "parameters": {

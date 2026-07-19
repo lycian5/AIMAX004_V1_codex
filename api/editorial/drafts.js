@@ -16,7 +16,7 @@ const DRAFT_SCHEMA = {
     title: { type: 'string' },
     subtitle: { type: 'string' },
     summary: { type: 'string' },
-    body_html: { type: 'string', minLength: 2300 },
+    body_html: { type: 'string', minLength: 200, maxLength: 1600 },
     tags: { type: 'array', items: { type: 'string' } },
   },
   required: ['title', 'subtitle', 'summary', 'body_html', 'tags'],
@@ -66,11 +66,11 @@ async function listKeywords(req, res) {
   const limitKeywords = clamp(
     req.query?.limitKeywords,
     1,
-    30,
-    Number(process.env.AGENT_REACH_LIMIT_KEYWORDS || 6)
+    100,
+    Number(process.env.AGENT_REACH_LIMIT_KEYWORDS || 54)
   );
-  const coreKeywordCount = Number(process.env.AGENT_REACH_CORE_KEYWORDS || 4);
-  const rotatingKeywordCount = Number(process.env.AGENT_REACH_ROTATING_KEYWORDS || 2);
+  const coreKeywordCount = Number(process.env.AGENT_REACH_CORE_KEYWORDS || 12);
+  const rotatingKeywordCount = Number(process.env.AGENT_REACH_ROTATING_KEYWORDS || 42);
   const { data: keywords, error } = await supabase
     .from('tracked_keywords')
     .select('id, keyword, category, datalab_priority')
@@ -96,7 +96,7 @@ async function listKeywords(req, res) {
 
 async function listBriefs(req, res) {
   const supabase = getSupabase();
-  const limit = clamp(req.query?.limit, 1, 100, 30);
+  const limit = clamp(req.query?.limit, 1, 100, 100);
   let query = supabase
     .from('event_clusters')
     .select('id,category,representative_title,event_date,first_seen_at,last_seen_at,article_count,official_source_count,status')
@@ -149,7 +149,7 @@ async function generateDraft(req, res) {
   const response = await getOpenAI().chat.completions.create({
     model,
     messages: [
-      { role: 'system', content: '당신은 코아뉴스 취재기자입니다. 제공된 근거만 사용해 한국어 뉴스 기사를 작성하세요. 확인되지 않은 사실, 가상 인용, 임의 수치를 만들지 마세요. HTML 태그를 제외한 본문 텍스트를 반드시 2000자 이상 작성하고, body_html은 최소 2300자 이상이어야 합니다. HTML은 p, h3, ul, li 태그만 사용합니다. 출처 간 차이가 있으면 단정하지 말고 확인 필요 사항을 명시하세요.' },
+      { role: 'system', content: '당신은 코아뉴스 소재 편집 보조입니다. 제공된 근거만 사용해 기사 작성 여부를 판단할 수 있는 짧은 한국어 맥락 요약을 작성하세요. 완성 기사를 쓰지 말고, 무슨 일이 있었는지, 왜 지금 다룰 만한지, 핵심 수치·기관·일자, 추가 확인 사항, 권장 기사 각도를 3~5개 문단이나 목록으로 정리하세요. 확인되지 않은 사실, 가상 인용, 임의 수치를 만들지 마세요. body_html은 200~1600자 범위로 작성하고 p, h3, ul, li 태그만 사용합니다. 출처 간 차이가 있으면 단정하지 말고 확인 필요 사항을 명시하세요.' },
       { role: 'user', content: buildEvidencePrompt(cluster, articles, facts) },
     ],
     response_format: { type: 'json_schema', json_schema: { name: 'coanews_editorial_draft', strict: true, schema: DRAFT_SCHEMA } },

@@ -1,5 +1,6 @@
 {
-  "name": "COA NEWS — 뉴스 수집 (Collect)",
+  "name": "[보관] COA NEWS - 구형 뉴스 수집",
+  "active": false,
   "nodes": [
     {
       "parameters": {

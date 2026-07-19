@@ -69,7 +69,12 @@ function sanitizeOptions(body) {
 
   const result = {};
   if (sources.length) result.sources = sources.join(',');
-  result.limitKeywords = clampInteger(body.limitKeywords, 1, 30, 6);
+  result.limitKeywords = clampInteger(
+    body.limitKeywords,
+    1,
+    100,
+    Number(process.env.AGENT_REACH_LIMIT_KEYWORDS || 54)
+  );
   result.exaResults = clampInteger(body.exaResults, 1, 10, 5);
   result.officialResults = clampInteger(body.officialResults, 1, 10, 3);
   result.rssResults = clampInteger(body.rssResults, 1, 20, 8);

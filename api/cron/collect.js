@@ -50,9 +50,9 @@ module.exports = async (req, res) => {
   let articlesUpserted = 0;
   let keywordFailures = 0;
   const selectedKeywords = selectHybridKeywords(keywords || [], {
-    limitKeywords: process.env.AGENT_REACH_LIMIT_KEYWORDS || 6,
-    coreKeywordCount: process.env.AGENT_REACH_CORE_KEYWORDS || 4,
-    rotatingKeywordCount: process.env.AGENT_REACH_ROTATING_KEYWORDS || 2,
+    limitKeywords: process.env.BASE_COLLECT_LIMIT_KEYWORDS || 18,
+    coreKeywordCount: process.env.BASE_COLLECT_CORE_KEYWORDS || 6,
+    rotatingKeywordCount: process.env.BASE_COLLECT_ROTATING_KEYWORDS || 12,
     date: new Date(),
   });
 

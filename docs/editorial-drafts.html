@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>COA NEWS 편집 초안</title>
+  <title>COA NEWS 소재 초안</title>
   <style>
     :root{font-family:Arial,sans-serif;color:#18212a;background:#eef2f4;--blue:#087ea4;--line:#d7e0e4;--muted:#65747d;--good:#087a43;--bad:#b42318}*{box-sizing:border-box}
     body{margin:0}.top{background:#087ea4;color:#fff;padding:18px 24px}.top h1{margin:0;font-size:21px}.toolbar{max-width:1200px;margin:18px auto;padding:0 16px;display:flex;gap:10px}.toolbar select{border:1px solid #b9c8cf;border-radius:5px;padding:10px}.btn{border:0;border-radius:5px;padding:10px 15px;font-weight:700;cursor:pointer;background:var(--blue);color:#fff;text-decoration:none}.btn.gray{background:#fff;color:#24313a;border:1px solid #b9c8cf}.btn.good{background:var(--good)}.btn.bad{background:var(--bad)}
@@ -12,7 +12,7 @@
   </style>
 </head>
 <body>
-  <header class="top"><h1>COA NEWS 편집 초안</h1></header>
+  <header class="top"><h1>COA NEWS 소재 초안</h1></header>
   <section class="toolbar">
     <select id="status">
       <option value="">전체 상태</option>
@@ -82,7 +82,7 @@
         <div class="field"><label>태그 (쉼표 구분)</label><input id="tags" value="${esc((draft.tags || []).join(', '))}"></div>
         <div class="field"><label>편집 메모</label><textarea id="notes">${esc(draft.editorial_notes || '')}</textarea></div>
         <div class="actions">
-          <button class="btn gray" id="save">저장</button><button class="btn" id="submit">뉴스등록·승인대기</button>
+          <button class="btn gray" id="save">저장</button><button class="btn" id="submit">내부 검토대기</button>
           <button class="btn good" id="approve">승인</button><button class="btn bad" id="reject">반려</button>
           <button class="btn gray" id="copy">등록용 복사</button><button class="btn gray" id="json">JSON 내보내기</button>
         </div>`;

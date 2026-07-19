@@ -8,7 +8,7 @@ assert.match(api, /event_clusters/);
 assert.match(api, /article_facts/);
 assert.match(api, /raw_articles/);
 assert.match(api, /view === 'briefs'/);
-assert.match(page, /AI 초안 생성/);
+assert.match(page, /AI 맥락 요약/);
 assert.match(page, /coa_news_draft_seed/);
 assert.match(page, /CoaAuth\.request/);
 assert.doesNotMatch(page, /CRON_SECRET/);

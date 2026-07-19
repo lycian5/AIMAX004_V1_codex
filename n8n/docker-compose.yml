@@ -1,6 +1,7 @@
+# Archived reference only. Use deploy/n8n/docker-compose.yml for production.
 services:
   n8n:
-    image: n8nio/n8n:latest
+    image: n8nio/n8n:2.30.7
     container_name: coa-n8n
     restart: unless-stopped
     ports:
