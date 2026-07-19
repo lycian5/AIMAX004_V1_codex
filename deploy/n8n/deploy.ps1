@@ -119,6 +119,7 @@ $RemoteScript = @'
 set -Eeuo pipefail
 export DEBIAN_FRONTEND=noninteractive
 cd /opt/n8n
+sed -i 's/\r$//' .env
 chmod 600 .env
 
 echo "==> Install base packages"
