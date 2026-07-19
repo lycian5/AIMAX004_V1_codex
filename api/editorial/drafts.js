@@ -1,5 +1,11 @@
 const { getSupabase } = require('../lib/supabase');
-const { assertCronAuth } = require('../lib/cronAuth');
+const {
+  assertCronAuth,
+  clearDashboardSessionCookie,
+  createDashboardSessionCookie,
+  verifyDashboardPassword,
+  verifyDashboardSession,
+} = require('../lib/cronAuth');
 const { getOpenAI } = require('../lib/openai');
 const { resolveOpenAIModel } = require('../lib/openaiModels');
 const { selectHybridKeywords } = require('../../scripts/keyword-selection');
@@ -18,6 +24,12 @@ const DRAFT_SCHEMA = {
 };
 
 module.exports = async (req, res) => {
+  res.setHeader('Cache-Control', 'private, no-store');
+  if (req.method === 'POST' && req.body?.action === 'login') return login(req, res);
+  if (req.method === 'POST' && req.body?.action === 'logout') return logout(req, res);
+  if (req.method === 'GET' && req.query?.view === 'session') {
+    return res.status(200).json({ authenticated: verifyDashboardSession(req) });
+  }
   try { assertCronAuth(req); } catch (err) { res.status(err.statusCode || 401).json({ error: err.message }); return; }
   try {
     if (req.method === 'GET' && req.query?.view === 'briefs') return listBriefs(req, res);
@@ -31,6 +43,23 @@ module.exports = async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 };
+
+async function login(req, res) {
+  if (!process.env.DASHBOARD_PASSWORD) {
+    return res.status(503).json({ error: 'DASHBOARD_PASSWORD is not configured' });
+  }
+  if (!verifyDashboardPassword(req.body?.password)) {
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    return res.status(401).json({ error: '로그인 정보가 올바르지 않습니다.' });
+  }
+  res.setHeader('Set-Cookie', createDashboardSessionCookie());
+  return res.status(200).json({ ok: true, expiresIn: 604800 });
+}
+
+function logout(req, res) {
+  res.setHeader('Set-Cookie', clearDashboardSessionCookie());
+  return res.status(200).json({ ok: true });
+}
 
 async function listKeywords(req, res) {
   const supabase = getSupabase();

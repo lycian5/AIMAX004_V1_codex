@@ -42,7 +42,7 @@
         <div class="field"><label for="exaResults">Exa 결과 수</label><input id="exaResults" type="number" min="1" max="10" value="5" /></div>
         <div class="field"><label for="officialResults">공식 출처 결과 수</label><input id="officialResults" type="number" min="1" max="10" value="3" /></div>
         <div class="field"><label for="rssResults">RSS 결과 수</label><input id="rssResults" type="number" min="1" max="20" value="8" /></div>
-        <div class="field"><label for="adminKey">실행 인증키</label><input id="adminKey" type="password" autocomplete="off" placeholder="CRON_SECRET" /></div>
+        <div class="field"><label>관리자 세션</label><button id="logout" class="btn" type="button">로그아웃</button></div>
       </div>
       <div class="field" style="margin-top:14px"><label for="keywords">직접 키워드 (선택)</label><textarea id="keywords" placeholder="AI 스타트업, 소상공인 지원, 업무 자동화"></textarea></div>
     </section>
@@ -51,20 +51,17 @@
       <pre id="result">실행 결과가 여기에 표시됩니다.</pre>
     </section>
   </main>
+  <script src="/auth-session.js"></script>
   <script>
     const run = document.getElementById('run');
     const status = document.getElementById('status');
     const result = document.getElementById('result');
     const loadKeywords = document.getElementById('loadKeywords');
     loadKeywords.addEventListener('click', async () => {
-      const key = document.getElementById('adminKey').value.trim();
-      if (!key) return showKeywordError('실행 인증키를 먼저 입력하세요.');
       loadKeywords.disabled = true;
       try {
         const limit = document.getElementById('limitKeywords').value;
-        const response = await fetch(`/api/editorial/drafts?view=keywords&limitKeywords=${encodeURIComponent(limit)}`, {
-          headers: {Authorization: `Bearer ${key}`},
-        });
+        const response = await CoaAuth.request(`/api/editorial/drafts?view=keywords&limitKeywords=${encodeURIComponent(limit)}`);
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || `HTTP ${response.status}`);
         renderKeywords('coreKeywords', data.core, false);
@@ -74,16 +71,14 @@
       finally { loadKeywords.disabled = false; }
     });
     run.addEventListener('click', async () => {
-      const key = document.getElementById('adminKey').value.trim();
       const sources = [...document.querySelectorAll('[name=source]:checked')].map(el => el.value);
-      if (!key) return show('실행 인증키를 입력하세요.', false);
       if (!sources.length) return show('수집 채널을 하나 이상 선택하세요.', false);
       run.disabled = true; status.textContent = '수집 중'; status.className = '';
       result.textContent = 'VPS에서 수집하고 있습니다...';
       try {
-        const response = await fetch('/api/cron/agent-reach', {
+        const response = await CoaAuth.request('/api/cron/agent-reach', {
           method: 'POST',
-          headers: {'Content-Type':'application/json','Authorization':`Bearer ${key}`},
+          headers: {'Content-Type':'application/json'},
           body: JSON.stringify({
             sources,
             limitKeywords: document.getElementById('limitKeywords').value,
@@ -115,6 +110,8 @@
     }
     function escapeHtml(value) { return String(value || '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char])); }
     function show(message, ok) { status.textContent = ok ? '완료' : '실패'; status.className = ok ? 'ok' : 'error'; result.textContent = message; }
+    document.getElementById('logout').onclick = CoaAuth.logout;
+    CoaAuth.requireSession().then((authenticated) => { if (authenticated) loadKeywords.click(); });
   </script>
 </body>
 </html>

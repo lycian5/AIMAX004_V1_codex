@@ -8,6 +8,17 @@ Target deployment URL:
 
 https://aimax-004-v1-codex.vercel.app
 
+## Admin Login
+
+The collection dashboard, research briefs, and editorial drafts use one administrator session. Set these Vercel Production environment variables before deployment:
+
+```text
+CRON_SECRET=<machine-to-machine automation secret>
+DASHBOARD_PASSWORD=<separate administrator password, at least 12 characters>
+```
+
+Optionally set `DASHBOARD_SESSION_SECRET` to a separate random value with at least 32 characters. Open `/admin-login` and sign in once; the secure `HttpOnly` session lasts seven days and is shared by `/vps-collector`, `/research-briefs`, and `/editorial-drafts`. Changing `DASHBOARD_PASSWORD` invalidates existing sessions. Do not use `CRON_SECRET` as the dashboard password.
+
 To get this exact URL in Vercel, create or import the project with this project name:
 
 ```text

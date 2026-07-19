@@ -12,6 +12,7 @@
     "test:research-briefs": "node tests/test_research_briefs.js",
     "test:editorial-workflow": "node tests/test_editorial_workflow.js",
     "test:ops-health": "node tests/test_ops_health.js",
+    "test:dashboard-auth": "node tests/test_dashboard_auth.js",
     "collect:agent-reach": "node scripts/agent-reach-collect.js",
     "agent-reach:runner": "node scripts/agent-reach-runner.js"
   },

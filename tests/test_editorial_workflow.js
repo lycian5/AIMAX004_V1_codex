@@ -11,5 +11,7 @@ assert.match(api, /action === 'reject'/);
 assert.match(api, /허용되지 않은 상태 전환/);
 assert.match(page, /등록용 복사/);
 assert.match(page, /JSON 내보내기/);
+assert.match(page, /CoaAuth\.request/);
+assert.doesNotMatch(page, /CRON_SECRET/);
 assert.match(migration, /create table if not exists editorial_drafts/);
 process.stdout.write('Editorial workflow checks passed.\n');

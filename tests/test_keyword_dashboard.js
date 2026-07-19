@@ -13,6 +13,7 @@ assert.match(dashboard, /핵심 키워드 4개/);
 assert.match(dashboard, /오늘의 유동 키워드 2개/);
 assert.match(endpoint, /view === 'keywords'/);
 assert.match(dashboard, /\/api\/editorial\/drafts\?view=keywords/);
-assert.match(dashboard, /Authorization: `Bearer \$\{key\}`/);
+assert.match(dashboard, /CoaAuth\.request/);
+assert.doesNotMatch(dashboard, /CRON_SECRET/);
 
 process.stdout.write('Keyword dashboard checks passed.\n');
