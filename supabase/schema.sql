@@ -120,6 +120,18 @@ create index if not exists topic_suggestions_date_idx on topic_suggestions(sugge
 
 create index if not exists tracked_keywords_category_status_idx on tracked_keywords(category, status);
 
+create table if not exists collection_schedules (
+  key text primary key check (key = 'agent_reach'),
+  enabled boolean not null default true,
+  daily_time time not null default '06:30',
+  timezone text not null default 'Asia/Seoul' check (timezone = 'Asia/Seoul'),
+  updated_at timestamptz not null default now()
+);
+
+insert into collection_schedules (key, enabled, daily_time, timezone)
+values ('agent_reach', true, '06:30', 'Asia/Seoul')
+on conflict (key) do nothing;
+
 -- ── 시드 키워드 54개 (docs/index.html의 QUICK_KEYWORDS와 동일) ──────────────
 insert into tracked_keywords (keyword, category, tier, status, datalab_priority, added_by) values
   ('생성형 AI', 'ai_business', 'seed', 'active', 1, 'manual'),

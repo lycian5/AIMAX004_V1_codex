@@ -1,117 +1,68 @@
 {
   "id": "coaAgentReachCollectV1",
-  "name": "COA NEWS — Agent Reach 보강 수집",
+  "name": "COA NEWS Agent Reach scheduled collection",
   "active": false,
   "nodes": [
     {
-      "parameters": {
-        "rule": {
-          "interval": [
-            {
-              "triggerAtHour": 6,
-              "triggerAtMinute": 30
-            }
-          ]
-        }
-      },
+      "parameters": { "rule": { "interval": [{ "field": "minutes", "minutesInterval": 5 }] } },
       "id": "cron-trigger",
-      "name": "⏰ 매일 06:30 실행",
+      "name": "Check schedule every 5 minutes",
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [0, 260]
+      "position": [0, 220]
     },
     {
-      "parameters": {
-        "httpMethod": "POST",
-        "path": "agent-reach-collect",
-        "responseMode": "lastNode",
-        "options": {}
-      },
+      "parameters": { "httpMethod": "POST", "path": "agent-reach-collect", "responseMode": "lastNode", "options": {} },
       "id": "webhook-trigger",
-      "name": "🔔 API Webhook 실행",
+      "name": "API webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [0, 430],
+      "position": [0, 420],
       "webhookId": "agent-reach-collect"
     },
     {
       "parameters": {
-        "jsCode": "const expected = $env.AGENT_REACH_WEBHOOK_SECRET || '';\nconst runnerSecret = $env.AGENT_REACH_RUNNER_SECRET || expected;\nconst headers = $json.headers || {};\nconst fromWebhook = Object.keys(headers).length > 0;\nif (expected && fromWebhook) {\n  const auth = headers.authorization || headers.Authorization || '';\n  const headerSecret = headers['x-agent-reach-secret'] || headers['X-Agent-Reach-Secret'] || '';\n  if (auth !== `Bearer ${expected}` && headerSecret !== expected) {\n    throw new Error('Unauthorized Agent Reach webhook call');\n  }\n}\nconst scheduleRequest = {\n  sources: $env.AGENT_REACH_SOURCES || 'exa,official,rss',\n  limitKeywords: Number($env.AGENT_REACH_LIMIT_KEYWORDS || 54),\n  exaResults: Number($env.AGENT_REACH_EXA_RESULTS || 3),\n  officialResults: Number($env.AGENT_REACH_OFFICIAL_RESULTS || 3),\n  rssResults: Number($env.AGENT_REACH_RSS_RESULTS || 8),\n};\nconst request = fromWebhook && $json.body && typeof $json.body === 'object' ? $json.body : scheduleRequest;\nreturn [{\n  json: {\n    trigger: fromWebhook ? 'webhook' : 'schedule',\n    runnerUrl: $env.AGENT_REACH_RUNNER_URL || 'http://host.docker.internal:8787/run',\n    runnerSecret,\n    request,\n  }\n}];"
+        "jsCode": "const expected = $env.AGENT_REACH_WEBHOOK_SECRET || '';\nconst runnerSecret = $env.AGENT_REACH_RUNNER_SECRET || expected;\nconst headers = $json.headers || {};\nconst fromWebhook = Object.keys(headers).length > 0;\nif (expected && fromWebhook) {\n  const auth = headers.authorization || headers.Authorization || '';\n  const headerSecret = headers['x-agent-reach-secret'] || headers['X-Agent-Reach-Secret'] || '';\n  if (auth !== `Bearer ${expected}` && headerSecret !== expected) throw new Error('Unauthorized Agent Reach webhook call');\n}\nconst scheduleRequest = {\n  sources: $env.AGENT_REACH_SOURCES || 'exa,official,rss',\n  limitKeywords: Number($env.AGENT_REACH_LIMIT_KEYWORDS || 54),\n  exaResults: Number($env.AGENT_REACH_EXA_RESULTS || 3),\n  officialResults: Number($env.AGENT_REACH_OFFICIAL_RESULTS || 3),\n  rssResults: Number($env.AGENT_REACH_RSS_RESULTS || 8),\n};\nif (!fromWebhook) {\n  const scheduleUrl = `${$env.SUPABASE_URL}/rest/v1/collection_schedules?key=eq.agent_reach&select=enabled,daily_time,timezone`;\n  const response = await fetch(scheduleUrl, { headers: { apikey: $env.SUPABASE_SERVICE_ROLE_KEY, Authorization: `Bearer ${$env.SUPABASE_SERVICE_ROLE_KEY}` } });\n  if (!response.ok) throw new Error(`Collection schedule lookup failed: ${response.status}`);\n  const rows = await response.json();\n  const schedule = rows[0] || { enabled: true, daily_time: '06:30', timezone: 'Asia/Seoul' };\n  const parts = new Intl.DateTimeFormat('en-GB', { timeZone: schedule.timezone || 'Asia/Seoul', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date());\n  const hour = parts.find((part) => part.type === 'hour').value;\n  const minute = parts.find((part) => part.type === 'minute').value;\n  if (!schedule.enabled || `${hour}:${minute}` !== String(schedule.daily_time || '06:30').slice(0, 5)) return [];\n}\nconst request = fromWebhook && $json.body && typeof $json.body === 'object' ? $json.body : scheduleRequest;\nreturn [{ json: { trigger: fromWebhook ? 'webhook' : 'schedule', runnerUrl: $env.AGENT_REACH_RUNNER_URL || 'http://host.docker.internal:8787/run', runnerSecret, request } }];"
       },
       "id": "prepare-runner",
-      "name": "🔐 Runner 호출 준비",
+      "name": "Prepare runner",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [270, 340]
+      "position": [280, 320]
     },
     {
       "parameters": {
         "method": "POST",
         "url": "={{ $json.runnerUrl }}",
         "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            { "name": "Authorization", "value": "=Bearer {{ $json.runnerSecret }}" },
-            { "name": "Content-Type", "value": "application/json" }
-          ]
-        },
+        "headerParameters": { "parameters": [{ "name": "Authorization", "value": "=Bearer {{ $json.runnerSecret }}" }, { "name": "Content-Type", "value": "application/json" }] },
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ { source: 'n8n', trigger: $json.trigger, ...$json.request, async: true } }}",
-        "options": {
-          "timeout": 120000,
-          "response": { "response": { "responseFormat": "json" } }
-        }
+        "options": { "timeout": 120000, "response": { "response": { "responseFormat": "json" } } }
       },
       "id": "call-runner",
-      "name": "🧭 Agent Reach Runner 호출",
+      "name": "Call Agent Reach runner",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [540, 340]
+      "position": [560, 320]
     },
     {
-      "parameters": {
-        "jsCode": "const result = $input.first().json;\nreturn [{\n  json: {\n    ok: Boolean(result.ok),\n    accepted: Boolean(result.accepted),\n    args: result.args || [],\n    exitCode: result.exitCode,\n    summary: result.summary || null,\n    stderr: result.stderr || '',\n    completed_at: new Date().toISOString(),\n  }\n}];"
-      },
+      "parameters": { "jsCode": "const result = $input.first().json;\nreturn [{ json: { ok: Boolean(result.ok), accepted: Boolean(result.accepted), args: result.args || [], exitCode: result.exitCode, summary: result.summary || null, stderr: result.stderr || '', completed_at: new Date().toISOString() } }];" },
       "id": "format-summary",
-      "name": "📊 실행 결과 정리",
+      "name": "Format summary",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [810, 340]
+      "position": [830, 320]
     }
   ],
   "connections": {
-    "⏰ 매일 06:30 실행": {
-      "main": [
-        [{ "node": "🔐 Runner 호출 준비", "type": "main", "index": 0 }]
-      ]
-    },
-    "🔔 API Webhook 실행": {
-      "main": [
-        [{ "node": "🔐 Runner 호출 준비", "type": "main", "index": 0 }]
-      ]
-    },
-    "🔐 Runner 호출 준비": {
-      "main": [
-        [{ "node": "🧭 Agent Reach Runner 호출", "type": "main", "index": 0 }]
-      ]
-    },
-    "🧭 Agent Reach Runner 호출": {
-      "main": [
-        [{ "node": "📊 실행 결과 정리", "type": "main", "index": 0 }]
-      ]
-    }
+    "Check schedule every 5 minutes": { "main": [[{ "node": "Prepare runner", "type": "main", "index": 0 }]] },
+    "API webhook": { "main": [[{ "node": "Prepare runner", "type": "main", "index": 0 }]] },
+    "Prepare runner": { "main": [[{ "node": "Call Agent Reach runner", "type": "main", "index": 0 }]] },
+    "Call Agent Reach runner": { "main": [[{ "node": "Format summary", "type": "main", "index": 0 }]] }
   },
-  "settings": {
-    "executionOrder": "v1",
-    "saveManualExecutions": true,
-    "callerPolicy": "workflowsFromSameOwner",
-    "timezone": "Asia/Seoul"
-  },
+  "settings": { "executionOrder": "v1", "saveManualExecutions": true, "callerPolicy": "workflowsFromSameOwner", "timezone": "Asia/Seoul" },
   "staticData": null,
-  "tags": [
-    { "name": "coa-news" },
-    { "name": "agent-reach" },
-    { "name": "collect" }
-  ]
+  "tags": [{ "name": "coa-news" }, { "name": "agent-reach" }, { "name": "collect" }]
 }

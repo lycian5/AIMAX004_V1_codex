@@ -58,6 +58,8 @@ ssh -L 5678:127.0.0.1:5678 root@158.247.245.66
 
 `workflow_agent_reach_collect.json`을 n8n에 import한 경우 환경변수를 확인한 뒤 이 워크플로만 명시적으로 활성화합니다.
 
+자동 수집 시간은 `/vps-collector`의 `자동 수집 일정`에서 설정합니다. 이 워크플로는 5분마다 Supabase 설정을 확인해 선택한 KST 시각에만 실행합니다. 배포 후 `workflows/workflow_agent_reach_collect.json`을 n8n에 다시 import하고 기존 Agent Reach 워크플로를 교체한 뒤 활성화합니다.
+
 ## 백업과 복원
 
 VPS는 매일 02:10 KST에 `/opt/backups/coa-n8n`으로 다음 항목을 암호화해 보관합니다.
